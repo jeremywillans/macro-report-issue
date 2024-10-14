@@ -16,6 +16,11 @@ The categories, issues and ratings shown can all be customized in the Macro.
 
 Also allows for automatic upload of logs to Webex Control Hub
 
+When integrating with Service Now, this macro provides the following built in options 
+- Automatic lookup and linking to a CMDB CI, based on serial number
+- Automatic lookup and linking to reporter, based on provided username or email address
+- Configuration of assignments groups, urgency, additional fields based on selected category / issue.
+
 ### Screen Shots
 
 ![img1.png](img/img1.png)
@@ -148,6 +153,7 @@ These action buttons can be deployed by enabling the `debugButtons` option
 | snowEnabled | bool | `false` | Enable for Service NOW Incident Raise
 | snowTicketCall | bool | `true` | Enabled UI Checkbox to Raise Ticket for Call Survey
 | snowTicketReport | bool | `false` | Enable UI Checkbox to Raise Ticket for Report Issue
+| snowSuggestReporter | bool | `true` | Enables suggestion to enter reporter when submitting ticket
 | snowRaiseAverage | bool | `false` | Raise SNOW Incident for Average Responses<br>**Note:** snowRaiseAverage is overridden by snowTicketCall if enabled.
 | snowInstance | str | ` ` | Specify the base url for Service Now
 | snowCredentials | str | ` ` | Basic Auth format is "username:password" base64-encoded
