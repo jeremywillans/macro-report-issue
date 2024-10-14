@@ -61,6 +61,7 @@ const o = {
   snowEnabled: false, // Enable for Service NOW Incident Raise
   snowTicketCall: true, // Enabled UI Checkbox to Raise Ticket for Call Survey
   snowTicketReport: false, // Enable UI Checkbox to Raise Ticket for Report Issue
+  snowSuggestReporter: true, // Enables suggestion to enter reporter when submitting ticket
   snowRaiseAverage: false, // Enabled to raise Incident for Average Survey response
   //
   // Note: snowRaiseAverage is overridden by snowTicketCall if enabled.
@@ -1275,7 +1276,7 @@ xapi.Event.UserInterface.Extensions.Widget.Action.on(async (event) => {
       setPanelTimeout();
       raiseTicket = !raiseTicket;
       addPanel();
-      if (raiseTicket && (!reportInfo.reporter || reportInfo.reporter === '')) {
+      if (raiseTicket && o.snowSuggestReporter && (!reportInfo.reporter || reportInfo.reporter === '')) {
         setPanelTimeout();
         showTextInput(`${o.widgetPrefix}reporter_edit`, '⚠️ Missing Reporter ⚠️', `Please include your ${o.panelUsername ? 'Username' : 'Email'} to include in the ${l10n.snowTerm}`);
         return;
