@@ -36,7 +36,7 @@ The following table outlines how responses are processed for enabled services
 `callEnabled` - Controls if Port-Call Survey will be shown
 `buttonEnabled` - Controls if Report Issue button is added to the Touch Panel
 
-| Service | Option | Requirements
+| Service | Option | Outcome
 | ---- | ---- | ----
 | Webex | Any* | Message will be sent if Survey contains Comments
 | Webex | Survey - Excellent |  Message will be sent if `webexLogExcellent` is enabled
@@ -73,6 +73,7 @@ Note: You can optionally define two different spaces for Call Feedback vs Report
 
 **Service Now**
 - A User account with the `sn_incident_write` permission
+- If using CMDB and User Lookup options, the user account will also require read permission to these.
 - The URL of your Service Now instance
 - Credentials for the above user account, encoded in Base64 in the following format `username:password`
 - Macro searching CMDB using Serial Number to match CI Entity
