@@ -140,7 +140,7 @@ These action buttons can be deployed by enabling the `debugButtons` option
 | teamsReportWebhook | str | ` ` | If defined, report messages will be sent here.
 | **HTTP Server**
 | httpEnabled | bool | `false` | Enable for JSON HTTP POST Destination
-| httpUrl | str | `http://localhost:3000` | HTTP Server POST URL
+| httpUrl | str | ` ` | HTTP Server POST URL
 | httpAuth | bool | `false` | Destination requires HTTP Header for Authentication
 | httpHeader | str | `Authorization: xxxxx` | Header Content for HTTP POST Authentication
 | httpFormat | str | `none` | HTTP Custom Formatting - none,loki,powerBi
