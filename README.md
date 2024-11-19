@@ -68,7 +68,7 @@ The following items are needed, depending on the enabled services.
 Note: You can optionally define two different spaces for Call Feedback vs Report Issue messages 
 
 ### MS Teams Channels
-- One or Two MS Teams Channels configured with an [Incoming Webhook with Workflows](https://prod.support.services.microsoft.com/en-us/office/create-incoming-webhooks-with-workflows-for-microsoft-teams-8ae491c7-0394-4861-ba59-055e33f75498)
+- One or Two MS Teams Channels configured with an [Incoming Webhook with Workflows](https://support.microsoft.com/en-au/office/create-incoming-webhooks-with-workflows-for-microsoft-teams-8ae491c7-0394-4861-ba59-055e33f75498)
 - Defining `teamsReportWebhook` with a Webhook URL will send Report Issue messages (from the Report Issue button) to this separate space from Call Survey responses
 
 **Service Now**
