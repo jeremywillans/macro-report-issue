@@ -191,6 +191,7 @@ let callInfo = {};
 let callType = '';
 let showFeedback = true;
 let voluntaryRating = false;
+let activeCall = false;
 let callMatched = false;
 let callDestination = false;
 let raiseTicket = false;
@@ -227,21 +228,26 @@ async function removePanel(PanelId, showLog = true) {
 
 // Reset Variables
 function resetVariables() {
-  if (o.logDetailed) console.debug('Resetting Variables');
+  if (o.logDetailed) console.debug('Resetting Panel Variables');
   errorResult = false;
   userInfo = {};
   reportInfo = {};
-  callInfo = {};
-  callType = '';
   showFeedback = true;
   voluntaryRating = false;
-  callMatched = false;
-  callDestination = false;
   raiseTicket = false;
   manualReport = false;
   skipLog = true;
   panelStage = 0;
   removePanel(panelId);
+  if (!activeCall) {
+    console.debug('Resetting Call Variables');
+    callMatched = false;
+    callDestination = false;
+    callInfo = {};
+    callType = '';
+  } else {
+    console.debug('Active Call - Skipping Call Variables Reset');
+  }
 }
 
 // Category Formatter
@@ -1044,6 +1050,7 @@ async function processRequest() {
 
 // Process call data
 async function processCall() {
+  activeCall = true;
   if (callMatched) {
     return;
   }
@@ -1133,6 +1140,7 @@ async function initialPanel() {
 
 // Process after Call Disconnect
 function processDisconnect() {
+  activeCall = false;
   if (callInfo.Duration > o.minDuration || manualReport) {
     showRating();
   } else {
@@ -1446,6 +1454,7 @@ xapi.Status.MicrosoftTeams.Calling.InCall.on((status) => {
   if (result) {
     callType = 'mtr';
     callInfo.startTime = Date.now();
+    activeCall = true;
   } else {
     if (callInfo.startTime) {
       try {
