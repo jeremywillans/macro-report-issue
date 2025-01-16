@@ -1427,6 +1427,16 @@ xapi.Event.UserInterface.Message.Rating.Cleared.on((event) => {
   if (event.FeedbackId === '') return;
   switch (event.FeedbackId) {
     case `${o.widgetPrefix}rating_submit`:
+      // During Rating Response we clear the Rating Prompt, as it lingers in background.
+      // If we have already made a selection, dont treat as a default submission, simply return.
+      if (reportInfo.rating) return;
+      if (!manualReport && o.defaultSubmit) {
+        // Process Default Submit as Excellent
+        reportInfo.rating = 5;
+        showFeedback = false;
+        processRequest();
+      }
+      break;
     case `${o.widgetPrefix}rating_update`:
       setPanelTimeout();
       break;
