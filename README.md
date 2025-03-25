@@ -105,11 +105,8 @@ Logs from the Macro Console (specifically the Debug level which is not shown by 
 
 ## Debugging
 
-The macro contains two action buttons for testing the Survey without the need to make outbound calls.
-- Survey Testing - Using sample call data, this will trigger the Survey on the Touch Panel
-- Services Testing - Using sample call and survey data, this will trigger processing the enabled services
-
-These action buttons can be deployed by enabling the `debugButtons` option
+The macro contains an action button for testing the Post-Call Survey without the need to make outbound calls.
+This action button can be deployed by enabling the `debugButton` option
 
 ## Variables
 
@@ -119,7 +116,7 @@ These action buttons can be deployed by enabling the `debugButtons` option
 | ---- | ---- | ------- | -----------
 | appName | string | `reportIssue` | App Name
 | widgetPrefix | string | `ri-` | Prefix used for UI Widget and Feedback Identifiers
-| debugButtons | bool | `false` | Enables deployment of debugging Actions buttons designed for testing
+| debugButton | bool | `false` | Enables deployment of call survey debug button designed for testing
 | **Call Parameters**
 | callEnabled | bool | `true` | Should calls be processed (disable to only use button)
 | minDuration | num | `10` | Minimum call duration (seconds) before Survey is displayed
@@ -127,10 +124,11 @@ These action buttons can be deployed by enabling the `debugButtons` option
 | panelEmoticons | bool | `true` | Show emoticons on the panel
 | panelComments | bool | `true` | Show comments on the panel
 | panelTips | bool | `true` | Show text tips for category and issue selections
-| panelUsername | bool | `true` | Username instead of Email for Panel and SNOW Caller lookup
+| **User Selection**
+| userParseEmail | bool | `false` | Parse and validate an email address in user field
 | **Button Parameters**
 | buttonEnabled | bool | `true` | Include a Report Issue button on screen
-| buttonLocation | str | `HomeScreen` | Visible location of Report Issue button <br>**Options:** HomeScreen, HomeScreenAndCallControls, ControlPanel
+| buttonLocation | str | `HomeScreenAndCallControls` | Visible location of Report Issue button <br>**Options:** HomeScreen, HomeScreenAndCallControls, ControlPanel
 | buttonPosition | num | `1` | Button order position
 | buttonColor | str | `#1170CF` | Color code of button, default blue
 | **Webex Messaging**
@@ -155,7 +153,11 @@ These action buttons can be deployed by enabling the `debugButtons` option
 | snowTicketCall | bool | `true` | Enabled UI Checkbox to Raise Ticket for Call Survey
 | snowTicketReport | bool | `false` | Enable UI Checkbox to Raise Ticket for Report Issue
 | snowSuggestReporter | bool | `true` | Enables suggestion to enter reporter when submitting ticket
-| snowRaiseAverage | bool | `false` | Raise SNOW Incident for Average Responses<br>**Note:** snowRaiseAverage is overridden by snowTicketCall if enabled.
+| snowRaiseAverage | bool | `false` | Enabled to raise Incident for Average Survey response (3/4 stars)<br>**Note:** snowRaiseAverage is overridden by snowTicketCall if enabled.
+| snowUserLookup | bool | `true` | Lookup user in SNOW when entered (required for snowUserRequired)
+| snowUserAppend | str | `` | Allows appending string (such as @domain) during lookup
+| snowUserRequired | bool | `true` | Require user when raising a ticket in SNOW
+| snowUserField | str | `user_name` | Field to perform lookup from Service Now (alt is email)
 | snowInstance | str | ` ` | Specify the base url for Service Now
 | snowCredentials | str | ` ` | Basic Auth format is "username:password" base64-encoded
 | snowCallerId | str | ` ` | Default Caller for Incidents, needs to be sys_id of Caller
@@ -184,6 +186,8 @@ These action buttons can be deployed by enabling the `debugButtons` option
 | issuePrefix | `Report Issue` | Prefix shown for report issue titles
 | feedbackPrefix | `Feedback` | Prefix shown for call survey feedback titles
 | snowTerm | `Incident` | Terminology used for Incident in Service Now
+| userField | `Username` | Terminology used on panel to represent user field
+| userPlaceholder | `Please provide your username` | Placeholder for User prompt
 
 ### Power Bi Streaming Data Set
 
