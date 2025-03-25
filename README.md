@@ -118,7 +118,7 @@ This action button can be deployed by enabling the `debugButton` option
 | widgetPrefix | string | `ri-` | Prefix used for UI Widget and Feedback Identifiers
 | debugButton | bool | `false` | Enables deployment of call survey debug button designed for testing
 | **Call Parameters**
-| callEnabled | bool | `true` | Should calls be processed (disable to only use button)
+| callEnabled | bool | `false` | Should calls be processed (disable to only use button)
 | minDuration | num | `10` | Minimum call duration (seconds) before Survey is displayed
 | **Panel Parameters**
 | panelEmoticons | bool | `true` | Show emoticons on the panel
@@ -155,7 +155,7 @@ This action button can be deployed by enabling the `debugButton` option
 | snowSuggestReporter | bool | `true` | Enables suggestion to enter reporter when submitting ticket
 | snowRaiseAverage | bool | `false` | Enabled to raise Incident for Average Survey response (3/4 stars)<br>**Note:** snowRaiseAverage is overridden by snowTicketCall if enabled.
 | snowUserLookup | bool | `true` | Lookup user in SNOW when entered (required for snowUserRequired)
-| snowUserAppend | str | `` | Allows appending string (such as @domain) during lookup
+| snowUserAppend | str | ` ` | Allows appending string (such as @domain) during lookup
 | snowUserRequired | bool | `true` | Require user when raising a ticket in SNOW
 | snowUserField | str | `user_name` | Field to perform lookup from Service Now (alt is email)
 | snowInstance | str | ` ` | Specify the base url for Service Now

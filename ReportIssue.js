@@ -29,7 +29,7 @@ const o = {
   widgetPrefix: 'ri-', // Prefix used for UI Widget and Feedback Identifiers
   debugButton: false, // Enables deployment of call survey debug button designed for testing
   // Call Parameters
-  callEnabled: true, // Should calls be processed (disable to only use button)
+  callEnabled: false, // Should calls be processed (disable to only use button)
   minDuration: 10, // Minimum call duration (seconds) before Survey is displayed
   // Panel Parameters
   panelEmoticons: true, // Show emoticons on the panel
