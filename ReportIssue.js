@@ -21,13 +21,13 @@
 // eslint-disable-next-line import/no-unresolved
 import xapi from 'xapi';
 
-const version = '0.0.2';
+const version = '0.0.3';
 
 // Macro Options
 const o = {
   appName: 'reportIssue', // Prefix used for Logging and UI Extensions
   widgetPrefix: 'ri-', // Prefix used for UI Widget and Feedback Identifiers
-  debugButtons: false, // Enables deployment of debugging Actions buttons designed for testing
+  debugButton: false, // Enables deployment of call survey debug button designed for testing
   // Call Parameters
   callEnabled: true, // Should calls be processed (disable to only use button)
   minDuration: 10, // Minimum call duration (seconds) before Survey is displayed
@@ -35,10 +35,11 @@ const o = {
   panelEmoticons: true, // Show emoticons on the panel
   panelComments: true, // Show comments on the panel
   panelTips: true, // Show text tips for category and issue selections
-  panelUsername: false, // Username instead of Email for Panel and SNOW Caller lookup
+  // User Selection
+  userParseEmail: false, // Parse and validate an email address in user field
   // Button Parameters
   buttonEnabled: true, // Include a Report Issue button on screen
-  buttonLocation: 'HomeScreen', // Valid HomeScreen,HomeScreenAndCallControls,ControlPanel
+  buttonLocation: 'HomeScreenAndCallControls', // Valid HomeScreen,HomeScreenAndCallControls,ControlPanel
   buttonPosition: 1, // Button order position
   buttonColor: '#1170CF', // Color of button, default blue
   // Webex Space Parameters
@@ -61,8 +62,11 @@ const o = {
   snowEnabled: false, // Enable for Service NOW Incident Raise
   snowTicketCall: true, // Enabled UI Checkbox to Raise Ticket for Call Survey
   snowTicketReport: false, // Enable UI Checkbox to Raise Ticket for Report Issue
-  snowSuggestReporter: true, // Enables suggestion to enter reporter when submitting ticket
-  snowRaiseAverage: false, // Enabled to raise Incident for Average Survey response
+  snowRaiseAverage: false, // Enabled to raise Incident for Average Survey response (3/4 stars)
+  snowUserLookup: true, // Lookup user in SNOW when entered (required for snowUserRequired)
+  snowUserAppend: '', // Allows appending string (such as @domain) during lookup
+  snowUserRequired: false, // Require user when raising a ticket in SNOW
+  snowUserField: 'user_name', // Field to perform lookup from Service Now (alt is email)
   //
   // Note: snowRaiseAverage is overridden by snowTicketCall if enabled.
   //
@@ -95,6 +99,8 @@ const l10n = {
   issuePrefix: 'Report Issue', // Prefix shown for report issue titles
   feedbackPrefix: 'Feedback', // Prefix shown for call survey feedback titles
   snowTerm: 'Incident', // Button terminology used for Incident
+  userField: 'Username', // Terminology used on panel to represent user field
+  userPlaceholder: 'Please provide your username', // Placeholder for User prompt
 };
 
 // Maximum of 4 Categories
@@ -183,7 +189,6 @@ const catArray = Object.keys(categories);
 const buttonId = `${o.appName}-button-${version.replaceAll('.', '')}`;
 const panelId = `${o.appName}-panel-${version.replaceAll('.', '')}`;
 const debugSurvey = `${o.appName}-button-debugSurvey-${version.replaceAll('.', '')}`;
-const debugServices = `${o.appName}-button-debugServices-${version.replaceAll('.', '')}`;
 const sysInfo = {};
 let userInfo = {};
 let reportInfo = {};
@@ -222,7 +227,7 @@ async function removePanel(PanelId, showLog = true) {
     await xapi.Command.UserInterface.Extensions.Panel.Remove({ PanelId });
   } catch (error) {
     console.error('Unable to remove Panel');
-    console.debug(error.message);
+    console.debug(error.message ? error.message : error);
   }
 }
 
@@ -371,6 +376,9 @@ async function addPanel(newStage = false) {
   } else if (panelStage === 1) {
     title = `${prefix} - Select an Issue`;
   }
+
+  const userDisplay = reportInfo.reporter_display || reportInfo.reporter;
+  const userStatus = raiseTicket ? o.snowUserRequired ? 'Required' : 'Optional' : 'Optional';
 
   const xml = `
     <Extensions>
@@ -532,7 +540,7 @@ async function addPanel(newStage = false) {
             <Name/>
             <Widget>
               <WidgetId>${o.widgetPrefix}reporter_text</WidgetId>
-              <Name>${o.panelEmoticons ? '📧 ' : ''}${reportInfo.reporter && reportInfo.reporter !== '' ? reportInfo.reporter : `${o.panelUsername ? 'Username' : 'Email'} (Optional) &gt;`}</Name>
+              <Name>${o.panelEmoticons ? '📧 ' : ''}${reportInfo.reporter && reportInfo.reporter !== '' ? userDisplay : `${l10n.userField} (${userStatus}) &gt;`}</Name>
               <Type>Text</Type>
               <Options>size=3;fontSize=normal;align=right</Options>
             </Widget>
@@ -595,9 +603,9 @@ async function addButton() {
 }
 
 // Add Debug Buttons to Codec
-async function addDebugButtons() {
+async function addDebugButton() {
   if (o.logDetailed) console.debug(`Adding Debug Button: ${debugSurvey}`);
-  let xml = `<?xml version="1.0"?>
+  const xml = `<?xml version="1.0"?>
   <Extensions>
     <Version>1.11</Version>
     <Panel>
@@ -609,19 +617,6 @@ async function addDebugButtons() {
     </Panel>
   </Extensions>`;
   await xapi.Command.UserInterface.Extensions.Panel.Save({ PanelId: debugSurvey }, xml);
-  if (o.logDetailed) console.debug(`Adding Debug Button: ${debugServices}`);
-  xml = `<?xml version="1.0"?>
-  <Extensions>
-    <Version>1.11</Version>
-    <Panel>
-      <PanelId>${debugServices}</PanelId>
-      <Location>${sysInfo.isRoomOS ? o.buttonLocation : 'ControlPanel'}</Location>
-      <Icon>Concierge</Icon>
-      <Name>Debug Services</Name>
-      <ActivityType>Custom</ActivityType>
-    </Panel>
-  </Extensions>`;
-  await xapi.Command.UserInterface.Extensions.Panel.Save({ PanelId: debugServices }, xml);
 }
 
 // Post content to Webex Space
@@ -656,7 +651,7 @@ async function postWebex() {
     html += `<br><b>Reporter:</b>  <a href=webexteams://im?email=${userInfo.email}>${userInfo.name}</a> (${userInfo.email})`;
   } else if (reportInfo.reporter) {
     // Include Provided Report Detail if not matched in SNOW
-    html += `<br><b>Provided ${o.panelUsername ? 'Username' : 'Email'} :</b> ${reportInfo.reporter}`;
+    html += `<br><b>Provided ${l10n.userField} :</b> ${reportInfo.reporter}`;
   }
   html += '</blockquote>';
 
@@ -683,7 +678,7 @@ async function postWebex() {
     }
   } catch (error) {
     console.error('postWebex error');
-    console.debug(error.message);
+    console.debug(error.message ? error.message : error);
     errorResult = true;
   }
 }
@@ -764,7 +759,7 @@ async function postTeams() {
     facts.push({ title: 'Reporter', value: `${userInfo.name} (${userInfo.email})` });
   } else if (reportInfo.reporter) {
     // Include Provided Email if not matched in SNOW
-    facts.push({ title: `Provided ${o.panelUsername ? 'Username' : 'Email'}`, value: reportInfo.reporter });
+    facts.push({ title: `Provided ${l10n.userField}`, value: reportInfo.reporter });
   }
 
   cardBody.attachments[0].content.body[1].facts = facts;
@@ -794,7 +789,7 @@ async function postTeams() {
     }
   } catch (error) {
     console.error('postTeams error');
-    console.debug(error.message);
+    console.debug(error.message ? error.message : error);
   }
 }
 
@@ -892,45 +887,18 @@ async function postIncident() {
     messageContent.caller_id = o.snowCallerId;
   }
 
-  // SNOW Email Lookup, or append to description.
-  if (reportInfo.reporter) {
-    try {
-      let result = await xapi.Command.HttpClient.Get(
-        { Header: snowHeader, Url: `${snowUserUrl}?sysparm_limit=1&${o.panelUsername ? 'user_name' : 'email'}=${reportInfo.reporter}` },
-      );
-      result = JSON.parse(result.Body).result;
-      // Validate User Data
-      if (result.length === 1) {
-        [userInfo] = result;
-        messageContent.caller_id = userInfo.sys_id;
-        if (o.logDetailed) console.debug(`SNOW User Found - ${messageContent.caller_id}`);
-      } else {
-        messageContent.description += `\nProvided ${o.panelUsername ? 'Username' : 'Email'}: ${reportInfo.reporter}}`;
-      }
-    } catch (error) {
-      console.error('postIncident getUser error encountered');
-      console.debug(error.message);
-    }
+  if (userInfo.sys_id) {
+    messageContent.caller_id = userInfo.sys_id;
+  } else if (reportInfo.reporter) {
+    messageContent.description += `\nProvided ${l10n.userField}: ${reportInfo.reporter}}`;
   }
 
   if (o.snowCmdbCi) {
     messageContent.cmdb_ci = o.snowCmdbCi;
   }
 
-  if (o.snowCmdbLookup) {
-    try {
-      let result = await xapi.Command.HttpClient.Get({ Header: snowHeader, Url: `${snowCMDBUrl}?sysparm_limit=1&serial_number=${sysInfo.serial}` });
-      result = JSON.parse(result.Body).result;
-      // Validate CI Data
-      if (result && result.length === 1) {
-        const [ciInfo] = result;
-        messageContent.cmdb_ci = ciInfo.sys_id;
-        if (o.logDetailed) console.debug(`SNOW CI Found - ${messageContent.cmdb_ci}`);
-      }
-    } catch (error) {
-      console.error('postIncident getCMDBCi error encountered');
-      console.debug(error.message);
-    }
+  if (o.snowCmdbLookup && sysInfo.cmdbCi) {
+    messageContent.cmdb_ci = sysInfo.cmdbCi;
   }
 
   // Merge Extra Params from Default Options
@@ -971,7 +939,7 @@ async function postIncident() {
     if (o.logDetailed) console.debug(`postIncident successful: ${reportInfo.incident}`);
   } catch (error) {
     console.error('postIncident error encountered');
-    console.debug(error.message);
+    console.debug(error.message ? error.message : error);
     errorResult = true;
   }
 }
@@ -1062,7 +1030,7 @@ async function processCall() {
     return;
   }
 
-  if (call.Protocol === 'WebRTC') {
+  if (call.Protocol && call.Protocol === 'WebRTC') {
     callType = 'webrtc';
     callDestination = call.CallbackNumber;
     // Matched WebRTC Call
@@ -1182,9 +1150,9 @@ function showTextInput(promptId, overrideTitle = false, overrideText = false) {
     }
     case `${o.widgetPrefix}reporter_edit`: {
       promptBody.FeedbackId = `${o.widgetPrefix}reporter_submit`;
-      promptBody.Placeholder = `Enter your ${o.panelUsername ? 'username' : 'email address'}`;
-      promptBody.Text = `Please provide your ${o.panelUsername ? 'Username' : 'email address'}`;
-      promptBody.Title = `${manualReport ? l10n.issuePrefix : l10n.feedbackPrefix} ${o.panelUsername ? 'Username' : 'Email Address'}`;
+      promptBody.Placeholder = `Enter your ${l10n.userPlaceholder}`;
+      promptBody.Text = `Please provide your ${l10n.userField}`;
+      promptBody.Title = `${manualReport ? l10n.issuePrefix : l10n.feedbackPrefix} ${l10n.userField}`;
       // Populate field if previously added
       if (reportInfo.reporter !== '') {
         promptBody.InputText = reportInfo.reporter;
@@ -1201,6 +1169,36 @@ function showTextInput(promptId, overrideTitle = false, overrideText = false) {
     promptBody.Text = overrideText;
   }
   xapi.Command.UserInterface.Message.TextInput.Display(promptBody);
+}
+
+// Show Alert Prompt to User
+function showAlert(promptId, overrideTitle = false, overrideText = false) {
+  // Prevent Survey from closing when prompt open
+  clearTimeout(panelTimeout);
+  const promptBody = {
+    Duration: o.timeoutPopup,
+  };
+  switch (promptId) {
+    case `${o.widgetPrefix}reporter_missing`: {
+      promptBody.Text = `Please provide a valid ${l10n.userField}.`;
+      promptBody.Title = '⚠️ Missing Reporter ⚠️';
+      break;
+    }
+    case `${o.widgetPrefix}reporter_invalid`: {
+      promptBody.Text = `Unable to match the provided ${l10n.userField}<br>Please try again.`;
+      promptBody.Title = '⚠️ Invalid Reporter ⚠️';
+      break;
+    }
+    default:
+      return;
+  }
+  if (overrideTitle) {
+    promptBody.Title = overrideTitle;
+  }
+  if (overrideText) {
+    promptBody.Text = overrideText;
+  }
+  xapi.Command.UserInterface.Message.Alert.Display(promptBody);
 }
 
 // Validate Categories, Issues and Ratings
@@ -1254,6 +1252,16 @@ xapi.Event.UserInterface.Extensions.Widget.Action.on(async (event) => {
   // Skip non-panel Widgets
   switch (event.WidgetId) {
     case `${o.widgetPrefix}survey_submit`:
+      if (raiseTicket && o.snowUserRequired && (!reportInfo.reporter || reportInfo.reporter === '')) {
+        setPanelTimeout();
+        showAlert(`${o.widgetPrefix}reporter_missing`);
+        return;
+      }
+      if (raiseTicket && o.snowUserRequired && !userInfo.sys_id) {
+        setPanelTimeout();
+        showAlert(`${o.widgetPrefix}reporter_invalid`);
+        return;
+      }
       voluntaryRating = true;
       processRequest();
       break;
@@ -1310,26 +1318,14 @@ xapi.Event.UserInterface.Extensions.Panel.Clicked.on(async (event) => {
     initialPanel();
     return;
   }
-  if (event.PanelId !== debugSurvey && event.PanelId !== debugServices) return;
-  if (!o.debugButtons) return;
+  if (event.PanelId !== debugSurvey) return;
+  if (!o.debugButton) return;
   console.log(`Debug Button Triggered - ${event.PanelId}`);
   callType = sysInfo.isRoomOS ? 'webex' : 'mtr';
   callInfo.Duration = 17;
   if (sysInfo.isRoomOS) {
     callInfo.CauseType = 'LocalDisconnect';
     callDestination = 'spark:123456789@webex.com';
-  }
-  if (event.PanelId === debugServices) {
-    reportInfo.rating = Math.floor(Math.random() * (5) + 1);
-    reportInfo.category = catArray[Math.floor(Math.random() * (catArray.length))];
-    const issueIndex = Math.floor(Math.random() * (categories[reportInfo.category].issues.length));
-    reportInfo.issue = categories[reportInfo.category].issues[issueIndex].id;
-    console.log(reportInfo);
-    reportInfo.email = 'aileen.mottern@example.com';
-    voluntaryRating = true;
-    skipLog = true;
-    processRequest();
-    return;
   }
   processDisconnect();
 });
@@ -1360,14 +1356,44 @@ xapi.Event.UserInterface.Message.TextInput.Response.on(async (event) => {
       setPanelTimeout();
       break;
     case `${o.widgetPrefix}reporter_submit`:
-      if (!o.panelUsername && event.Text !== '' && !/^.*@.*\..*$/.test(event.Text)) {
+      if (o.userParseEmail && event.Text !== '' && !/^.*@.*\..*$/.test(event.Text)) {
         await sleep(500);
         console.warn('Invalid Email Address, re-prompting user...');
         await xapi.Command.Audio.Sound.Play({ Sound: 'Binding' });
         showTextInput(`${o.widgetPrefix}reporter_edit`, '⚠️ Invalid Email Address ⚠️');
         return;
       }
+      userInfo = {};
       reportInfo.reporter = event.Text;
+      reportInfo.reporter_display = false;
+      if (o.snowEnabled && (o.snowUserLookup || o.snowUserRequired)) {
+        try {
+          const user = `${reportInfo.reporter}${o.snowUserAppend}`;
+          console.log(user);
+          let result = await xapi.Command.HttpClient.Get(
+            { Header: snowHeader, Url: `${snowUserUrl}?sysparm_limit=1&${o.snowUserField}=${user}` },
+          );
+          result = JSON.parse(result.Body).result;
+          // Validate User Data
+          switch (result.length) {
+            case 0:
+              reportInfo.reporter_display = `${reportInfo.reporter} (Not Found)`;
+              if (o.logDetailed) console.debug(`SNOW User Not Found - ${user}`);
+              break;
+            case 1:
+              [userInfo] = result;
+              reportInfo.reporter_display = `${userInfo.name} (${reportInfo.reporter})`;
+              if (o.logDetailed) console.debug(`SNOW User Found - ${userInfo.name}`);
+              break;
+            default:
+              reportInfo.reporter_display = `${reportInfo.reporter} (Multiple Matches)`;
+              if (o.logDetailed) console.debug(`Query ${user} matched ${result.length} results`);
+          }
+        } catch (error) {
+          console.error('unable to lookup SNOW user');
+          console.debug(error.message ? error.message : error);
+        }
+      }
       addPanel(2);
       setPanelTimeout();
       break;
@@ -1428,7 +1454,7 @@ xapi.Event.UserInterface.Message.Rating.Cleared.on((event) => {
   switch (event.FeedbackId) {
     case `${o.widgetPrefix}rating_submit`:
       // During Rating Response we clear the Rating Prompt, as it lingers in background.
-      // If we have already made a selection, dont treat as a default submission, simply return.
+      // If we have already made a selection, don't treat as a default submission, simply return.
       if (reportInfo.rating) return;
       if (!manualReport && o.defaultSubmit) {
         // Process Default Submit as Excellent
@@ -1485,7 +1511,6 @@ function macroReset() {
   removePanel(panelId, false);
   removePanel(buttonId, false);
   removePanel(debugSurvey, false);
-  removePanel(debugServices, false);
 }
 
 // Process Macro Save
@@ -1538,13 +1563,29 @@ async function init() {
     }
     // HTTP Client needed for sending outbound requests
     await xapi.Config.HttpClient.Mode.set('On');
+    // Check for SNOW CMDB CI
+    if (o.snowEnabled && o.snowCmdbLookup) {
+      try {
+        let result = await xapi.Command.HttpClient.Get({ Header: snowHeader, Url: `${snowCMDBUrl}?sysparm_limit=1&serial_number=${sysInfo.serial}` });
+        result = JSON.parse(result.Body).result;
+        // Validate CI Data
+        if (result && result.length === 1) {
+          const [ciInfo] = result;
+          sysInfo.cmdbCi = ciInfo.sys_id;
+          if (o.logDetailed) console.debug(`SNOW CI Found - ${ciInfo.name}`);
+        }
+      } catch (error) {
+        console.error('unable to get SNOW CMDB CI');
+        console.debug(error.message ? error.message : error);
+      }
+    }
     // Validate Button
     if (o.buttonEnabled) {
       await addButton();
     }
-    // Validate Debug Buttons
-    if (o.debugButtons) {
-      await addDebugButtons();
+    // Validate Debug Button
+    if (o.debugButton) {
+      await addDebugButton();
     }
   } catch (error) {
     console.error(error.message ? error.message : error);
