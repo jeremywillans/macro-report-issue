@@ -37,6 +37,7 @@ const o = {
   panelTips: true, // Show text tips for category and issue selections
   // User Selection
   userParseEmail: false, // Parse and validate an email address in user field
+  userSuggest: true, // Enables suggestion to enter reporter when enabling ticket option
   // Button Parameters
   buttonEnabled: true, // Include a Report Issue button on screen
   buttonLocation: 'HomeScreenAndCallControls', // Valid HomeScreen,HomeScreenAndCallControls,ControlPanel
@@ -98,7 +99,7 @@ const l10n = {
   buttonText: 'Report Issue', // Text of button on Touch Panel
   issuePrefix: 'Report Issue', // Prefix shown for report issue titles
   feedbackPrefix: 'Feedback', // Prefix shown for call survey feedback titles
-  snowTerm: 'Incident', // Button terminology used for Incident
+  ticketTerm: 'Incident', // Button terminology used for the Ticket
   userField: 'Username', // Terminology used on panel to represent user field
   userPlaceholder: 'Please provide your username', // Placeholder for User prompt
 };
@@ -370,7 +371,7 @@ async function addPanel(newStage = false) {
   let title = `${prefix} - Select a Category`;
   let selectedIssue = false;
   if (panelStage === 2) {
-    title = `${prefix} - Optional Comments`;
+    title = `${prefix} - Additional Fields`;
     selectedIssue = categories[reportInfo.category].issues.find((i) => i.id === reportInfo.issue);
     if (reportInfo.issue === 'other') selectedIssue = { id: 'other', text: 'Other' };
   } else if (panelStage === 1) {
@@ -513,6 +514,21 @@ async function addPanel(newStage = false) {
           <Row>
             <Name/>
             <Widget>
+              <WidgetId>${o.widgetPrefix}reporter_text</WidgetId>
+              <Name>${o.panelEmoticons ? '📧 ' : ''}${reportInfo.reporter && reportInfo.reporter !== '' ? userDisplay : `${l10n.userField} (${userStatus}) &gt;`}</Name>
+              <Type>Text</Type>
+              <Options>size=3;fontSize=normal;align=right</Options>
+            </Widget>
+            <Widget>
+              <WidgetId>${o.widgetPrefix}reporter_edit</WidgetId>
+              <Name>${reportInfo.reporter && reportInfo.reporter !== '' ? 'Edit' : 'Add'}</Name>
+              <Type>Button</Type>
+              <Options>size=1</Options>
+            </Widget>
+          </Row>
+          <Row>
+            <Name/>
+            <Widget>
               <WidgetId>${o.widgetPrefix}comments_text</WidgetId>
               <Name>${o.panelEmoticons ? '💬 ' : ''}${reportInfo.comments && reportInfo.comments !== '' ? 'Edit Comments' : 'Comments (Optional)'} &gt;</Name>
               <Type>Text</Type>
@@ -538,32 +554,17 @@ async function addPanel(newStage = false) {
           ` : ''}
           <Row>
             <Name/>
-            <Widget>
-              <WidgetId>${o.widgetPrefix}reporter_text</WidgetId>
-              <Name>${o.panelEmoticons ? '📧 ' : ''}${reportInfo.reporter && reportInfo.reporter !== '' ? userDisplay : `${l10n.userField} (${userStatus}) &gt;`}</Name>
-              <Type>Text</Type>
-              <Options>size=3;fontSize=normal;align=right</Options>
-            </Widget>
-            <Widget>
-              <WidgetId>${o.widgetPrefix}reporter_edit</WidgetId>
-              <Name>${reportInfo.reporter && reportInfo.reporter !== '' ? 'Edit' : 'Add'}</Name>
-              <Type>Button</Type>
-              <Options>size=1</Options>
-            </Widget>
-          </Row>
-          <Row>
-            <Name/>
             ${o.snowEnabled && ((!manualReport && o.snowTicketCall) || (manualReport && o.snowTicketReport)) ? `
             <Widget>
               <WidgetId>${o.widgetPrefix}ticket_toggle</WidgetId>
-              <Name>${o.panelEmoticons ? '🎟️ ' : ''}Raise ${l10n.snowTerm}?</Name>
+              <Name>${o.panelEmoticons ? '🎟️ ' : ''}Raise ${l10n.ticketTerm}?</Name>
               <Type>Button</Type>
               <Options>size=2</Options>
             </Widget>
             ` : ''}
             <Widget>
               <WidgetId>${o.widgetPrefix}survey_submit</WidgetId>
-              <Name>Submit ${o.snowEnabled && raiseTicket ? l10n.snowTerm : 'Feedback'}${o.panelEmoticons ? ' 🚀' : ''}</Name>
+              <Name>Submit ${o.snowEnabled && raiseTicket ? l10n.ticketTerm : 'Feedback'}${o.panelEmoticons ? ' 🚀' : ''}</Name>
               <Type>Button</Type>
               <Options>size=2</Options>
             </Widget>
@@ -576,6 +577,9 @@ async function addPanel(newStage = false) {
     </Extensions>
   `;
   await xapi.Command.UserInterface.Extensions.Panel.Save({ PanelId: panelId }, xml);
+  if (panelStage === 2) {
+    await xapi.Command.UserInterface.Extensions.Widget.SetValue({ WidgetId: `${o.widgetPrefix}issue-button`, Value: 'active' });
+  }
   if ((o.snowEnabled && panelStage === 2)
     && ((!manualReport && o.snowTicketCall) || (manualReport && o.snowTicketReport))
   ) {
@@ -1005,7 +1009,7 @@ async function processRequest() {
       Duration = 20;
     }
     if (reportInfo.incident) {
-      Text += `<br>${l10n.snowTerm} ${reportInfo.incident} raised.`;
+      Text += `<br>${l10n.ticketTerm} ${reportInfo.incident} raised.`;
     }
     xapi.Command.UserInterface.Message.Alert.Display({
       Title,
@@ -1292,9 +1296,9 @@ xapi.Event.UserInterface.Extensions.Widget.Action.on(async (event) => {
       setPanelTimeout();
       raiseTicket = !raiseTicket;
       addPanel();
-      if (raiseTicket && o.snowSuggestReporter && (!reportInfo.reporter || reportInfo.reporter === '')) {
+      if (raiseTicket && o.userSuggest && (!reportInfo.reporter || reportInfo.reporter === '')) {
         setPanelTimeout();
-        showTextInput(`${o.widgetPrefix}reporter_edit`, '⚠️ Missing Reporter ⚠️', `Please include your ${o.panelUsername ? 'Username' : 'Email'} to include in the ${l10n.snowTerm}`);
+        showTextInput(`${o.widgetPrefix}reporter_edit`, '⚠️ Missing Reporter ⚠️', `Please include your ${l10n.userField} to include in the ${l10n.ticketTerm}`);
         return;
       }
       if (o.logDetailed) console.debug(`Raise Ticket: ${raiseTicket}`);

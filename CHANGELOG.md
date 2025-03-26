@@ -1,13 +1,17 @@
 # Changelog
 
 ## 0.0.3
-- callEnabled is now **disabled** by default (Post-Call Survey)
+- Post-Call Survey is now **disabled** by default (callEnabled attribute)
+- Show Reporter above comments
+- Highlight Selected Issue on Panel
 - Perform SNOW CI Lookup during init
 - Perform SNOW User lookup during selection
 - Allow requiring a User when sending to SNOW
 - Default include in Call Controls for RoomOS mode
 - Fix validate Protocol exists when processing call
 - Remove Debug Services button (retain Debug Survey)
+- Revise suggestReporter as userSuggest
+- Revise snowTerm as Ticket Term (Language option)
 - Improve error handling
 
 ## 0.0.2
