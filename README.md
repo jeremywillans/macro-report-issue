@@ -126,6 +126,7 @@ This action button can be deployed by enabling the `debugButton` option
 | panelTips | bool | `true` | Show text tips for category and issue selections
 | **User Selection**
 | userParseEmail | bool | `false` | Parse and validate an email address in user field
+| userSuggest | bool | `true` | Enables suggestion to enter reporter when enabling ticket option
 | **Button Parameters**
 | buttonEnabled | bool | `true` | Include a Report Issue button on screen
 | buttonLocation | str | `HomeScreenAndCallControls` | Visible location of Report Issue button <br>**Options:** HomeScreen, HomeScreenAndCallControls, ControlPanel
@@ -152,7 +153,6 @@ This action button can be deployed by enabling the `debugButton` option
 | snowEnabled | bool | `false` | Enable for Service NOW Incident Raise
 | snowTicketCall | bool | `true` | Enabled UI Checkbox to Raise Ticket for Call Survey
 | snowTicketReport | bool | `false` | Enable UI Checkbox to Raise Ticket for Report Issue
-| snowSuggestReporter | bool | `true` | Enables suggestion to enter reporter when submitting ticket
 | snowRaiseAverage | bool | `false` | Enabled to raise Incident for Average Survey response (3/4 stars)<br>**Note:** snowRaiseAverage is overridden by snowTicketCall if enabled.
 | snowUserLookup | bool | `true` | Lookup user in SNOW when entered (required for snowUserRequired)
 | snowUserAppend | str | ` ` | Allows appending string (such as @domain) during lookup
@@ -185,7 +185,7 @@ This action button can be deployed by enabling the `debugButton` option
 | buttonText | `Report Issue` | Text of button on Touch Panel
 | issuePrefix | `Report Issue` | Prefix shown for report issue titles
 | feedbackPrefix | `Feedback` | Prefix shown for call survey feedback titles
-| snowTerm | `Incident` | Terminology used for Incident in Service Now
+| ticketTerm | `Incident` | Terminology used for the Ticket
 | userField | `Username` | Terminology used on panel to represent user field
 | userPlaceholder | `Please provide your username` | Placeholder for User prompt
 
