@@ -49,6 +49,8 @@ const o = {
   webexBotToken: '', // Webex Bot Token for sending messages
   webexRoomId: '', // Webex Room Id for sending messages
   webexReportRoomId: '', // If defined, Report Issue messages will be sent here.
+  webexWebhook: '', // Webex Incoming Webhook for sending messages
+  webexReportWebhook: '', // If defined, Report Issue messages will be sent to this webhook.
   // MS Teams Channel Parameters
   teamsEnabled: false, // Send message to MS Teams channel when room released
   teamsLogExcellent: false, // Optionally log excellent results to Teams Channel
@@ -639,7 +641,7 @@ async function postWebex() {
       blockquote = '<blockquote class=danger>';
   }
 
-  let html = (`<b>${manualReport ? l10n.issuePrefix : `${l10n.feedbackPrefix} - ${formatRating(reportInfo.rating)} Report`}</b>${blockquote}<b>System Name:</b> ${sysInfo.name}<br><b>Serial Number:</b> ${sysInfo.serial}<br><b>SW Release:</b> ${sysInfo.version}`);
+  let html = (`<p><b>${manualReport ? l10n.issuePrefix : `${l10n.feedbackPrefix} - ${formatRating(reportInfo.rating)} Report`}</b></p>${blockquote}<b>System Name:</b> ${sysInfo.name}<br><b>Serial Number:</b> ${sysInfo.serial}<br><b>SW Release:</b> ${sysInfo.version}`);
   html += `<br><b>Source:</b> ${manualReport ? 'Report Issue' : 'Call Survey'}`;
   if (callType) { html += `<br><b>Call Type:</b> ${formatType(callType)}`; }
   if (callDestination) { html += `<br><b>Destination:</b> ${callDestination}`; }
@@ -664,26 +666,58 @@ async function postWebex() {
     roomId = o.webexReportRoomId;
   }
 
-  const messageContent = { roomId, html };
+  if (roomId && roomId !== '') {
+    if (o.logDetailed) console.debug('Sending Webex using Bot Token');
+    const messageContent = { roomId, html };
 
-  try {
-    const result = await xapi.Command.HttpClient.Post(
-      { Header: webexHeader, Url: 'https://webexapis.com/v1/messages' },
-      JSON.stringify(messageContent),
-    );
-    if (/20[04]/.test(result.StatusCode)) {
-      if (o.logDetailed) console.debug('postWebex message sent.');
-      return;
+    try {
+      const result = await xapi.Command.HttpClient.Post(
+        { Header: webexHeader, Url: 'https://webexapis.com/v1/messages' },
+        JSON.stringify(messageContent),
+      );
+      if (/20[04]/.test(result.StatusCode)) {
+        if (o.logDetailed) console.debug('postWebex message sent.');
+        return;
+      }
+      console.error(`postWebex status: ${result.StatusCode}`);
+      errorResult = true;
+      if (result.message && o.logDetailed) {
+        console.debug(`${result.message}`);
+      }
+    } catch (error) {
+      console.error('postWebex error');
+      console.debug(error.message ? error.message : error);
+      errorResult = true;
     }
-    console.error(`postWebex status: ${result.StatusCode}`);
-    errorResult = true;
-    if (result.message && o.logDetailed) {
-      console.debug(`${result.message}`);
+  }
+
+  let webhook = o.webexWebhook;
+  if (manualReport && (o.webexReportWebhook && o.webexReportWebhook !== '')) {
+    webhook = o.webexReportWebhook;
+  }
+
+  if (webhook && webhook !== '') {
+    if (o.logDetailed) console.debug('Sending Webex using Webhook');
+    const messageContent = { markdown: html };
+    try {
+      const result = await xapi.Command.HttpClient.Post(
+        { Header, Url: webhook },
+        JSON.stringify(messageContent),
+      );
+      if (/20[04]/.test(result.StatusCode)) {
+        if (o.logDetailed) console.debug('postWebex message sent.');
+        return;
+      }
+      console.error(`postWebex status: ${result.StatusCode}`);
+      errorResult = true;
+      if (result.message && o.logDetailed) {
+        console.debug(`${result.message}`);
+      }
+    } catch (error) {
+      console.error('postWebex error');
+      console.debug(error.message ? error.message : error);
+      errorResult = true;
     }
-  } catch (error) {
-    console.error('postWebex error');
-    console.debug(error.message ? error.message : error);
-    errorResult = true;
   }
 }
 
@@ -1324,7 +1358,7 @@ xapi.Event.UserInterface.Extensions.Panel.Clicked.on(async (event) => {
   }
   if (event.PanelId !== debugSurvey) return;
   if (!o.debugButton) return;
-  console.log(`Debug Button Triggered - ${event.PanelId}`);
+  console.info(`Debug Button Triggered - ${event.PanelId}`);
   callType = sysInfo.isRoomOS ? 'webex' : 'mtr';
   callInfo.Duration = 17;
   if (sysInfo.isRoomOS) {
@@ -1373,7 +1407,6 @@ xapi.Event.UserInterface.Message.TextInput.Response.on(async (event) => {
       if (o.snowEnabled && (o.snowUserLookup || o.snowUserRequired)) {
         try {
           const user = `${reportInfo.reporter}${o.snowUserAppend}`;
-          console.log(user);
           let result = await xapi.Command.HttpClient.Get(
             { Header: snowHeader, Url: `${snowUserUrl}?sysparm_limit=1&${o.snowUserField}=${user}` },
           );

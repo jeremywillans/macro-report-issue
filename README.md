@@ -57,8 +57,15 @@ The following table outlines how responses are processed for enabled services
 The following items are needed, depending on the enabled services.
 
 ### Webex Spaces**
+This integration supports either the [Incoming Webhook Integration](https://apphub.webex.com/applications/incoming-webhooks-cisco-systems-38054-23307-75252) or using a  Bot to send Webex messages.
+#### Incoming Webhook
+- One or two new or existing Webex Spaces with the webhook configured
+- `webexWebhook` is the default webhook used to send Webex Messages
+- Defining `webexReportWebhook` with an alternative webhook will send Report Issue messages (from the Report Issue button) to this separate space
+#### Webex Bot
 - A Webex Bot - create at [developer.webex.com](https://developer.webex.com/my-apps/new/bot) 
-- One or two new or existing Webex Spaces with the Webex bot as a member.
+- One or two new or existing Webex Spaces with the Webex bot as a member or a webhook configured
+- `webexRoomId` is the default space where Webex Messages are sent
 - Defining `webexReportRoomId` with a Room Id will send Report Issue messages (from the Report Issue button) to this separate space from Call Survey responses
 - The RoomId of the destination Webex space. These example methods can be used to get the Room Id
   - Using the [List Rooms](https://developer.webex.com/docs/api/v1/rooms/list-rooms) Developer API
@@ -69,7 +76,8 @@ Note: You can optionally define two different spaces for Call Feedback vs Report
 
 ### MS Teams Channels
 - One or Two MS Teams Channels configured with an [Incoming Webhook with Workflows](https://support.microsoft.com/en-au/office/create-incoming-webhooks-with-workflows-for-microsoft-teams-8ae491c7-0394-4861-ba59-055e33f75498)
-- Defining `teamsReportWebhook` with a Webhook URL will send Report Issue messages (from the Report Issue button) to this separate space from Call Survey responses
+- `teamsWebhook` is the default webhook used to send Teams Messages
+- Defining `teamsReportWebhook` with an alternative webhook will send Report Issue messages (from the Report Issue button) to this separate channel
 
 **Service Now**
 - A User account with the `sn_incident_write` permission
@@ -138,6 +146,8 @@ This action button can be deployed by enabling the `debugButton` option
 | webexBotToken | str | ` ` | Webex Bot Token for sending messages
 | webexRoomId | str | ` ` | Webex Room Id for sending messages
 | webexReportRoomId | str | ` ` | If defined, report issue messages will be sent here.
+| webexWebhook | str | ` ` | Webex Incoming Webhook for sending messages
+| webexReportWebhook | str | ` ` | If defined, Report Issue messages will be sent to this webhook.
 | **MS Teams Messaging**
 | teamsEnabled | bool | `false` | Send message to MS Teams channel when room released
 | teamsLogExcellent | bool | `false` | Optionally log excellent results to MS Teams channel
