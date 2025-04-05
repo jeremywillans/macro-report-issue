@@ -13,6 +13,7 @@
 - Revise suggestReporter as userSuggest
 - Revise snowTerm as Ticket Term (Language option)
 - Improve error handling
+- Support Incoming Webhook for Webex Messages
 
 ## 0.0.2
 - Capture default submit from survey rating prompt
