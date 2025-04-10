@@ -1606,10 +1606,13 @@ async function init() {
         let result = await xapi.Command.HttpClient.Get({ Header: snowHeader, Url: `${snowCMDBUrl}?sysparm_limit=1&serial_number=${sysInfo.serial}` });
         result = JSON.parse(result.Body).result;
         // Validate CI Data
+        if (result && result.length === 0) {
+          if (o.logDetailed) console.warn('SNOW CI Not Found');
+        }
         if (result && result.length === 1) {
           const [ciInfo] = result;
           sysInfo.cmdbCi = ciInfo.sys_id;
-          if (o.logDetailed) console.debug(`SNOW CI Found - ${ciInfo.name}`);
+          if (o.logDetailed) console.info(`SNOW CI Found - ${ciInfo.name}`);
         }
       } catch (error) {
         console.error('unable to get SNOW CMDB CI');
