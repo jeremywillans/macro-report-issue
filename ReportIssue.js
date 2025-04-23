@@ -107,7 +107,7 @@ const l10n = {
 };
 
 // Maximum of 4 Categories
-// Maximum of 4 Issues per Category
+// Maximum of 5 Issues per Category
 const categories = {
   video: {
     text: 'Video Issue',
@@ -117,6 +117,7 @@ const categories = {
       { id: 'outbound-video', text: 'Remote participants cant see me' },
       { id: 'video-quality', text: 'Bad video quality' },
       { id: 'item-4', text: 'Item 4' },
+      { id: 'other', text: 'Other' },
     ],
     // snowExtra: { assignment_group: 'sys_id-of-assignment-group' },
   },
@@ -127,6 +128,7 @@ const categories = {
       { id: 'inbound-audio', text: 'Issue with remote audio' },
       { id: 'outbound-audio', text: 'Remote participants cant hear me' },
       { id: 'audio-quality', text: 'Bad audio quality' },
+      { id: 'other', text: 'Other' },
     ],
     // snowExtra: { assignment_group: 'sys_id-of-assignment-group' },
   },
@@ -137,6 +139,7 @@ const categories = {
       { id: 'share-issue', text: 'Unable to share' },
       { id: 'outbound-content', text: 'Remote participants cant see my content' },
       { id: 'content-quality', text: 'Bad content quality' },
+      { id: 'other', text: 'Other' },
     ],
     // snowExtra: { assignment_group: 'sys_id-of-assignment-group' },
   },
@@ -151,6 +154,7 @@ const categories = {
         text: 'Dirty table or chairs',
         // snowExtra: { assignment_group: 'sys_id-of-assignment-group' },
       },
+      { id: 'other', text: 'Other' },
     ],
     // snowExtra: { assignment_group: 'sys_id-of-assignment-group' },
   },
@@ -375,7 +379,6 @@ async function addPanel(newStage = false) {
   if (panelStage === 2) {
     title = `${prefix} - Additional Fields`;
     selectedIssue = categories[reportInfo.category].issues.find((i) => i.id === reportInfo.issue);
-    if (reportInfo.issue === 'other') selectedIssue = { id: 'other', text: 'Other' };
   } else if (panelStage === 1) {
     title = `${prefix} - Select an Issue`;
   }
@@ -504,10 +507,6 @@ async function addPanel(newStage = false) {
                   <Name>${categories[reportInfo.category].issues[4].text}</Name>
                 </Value>
                 ` : ''}
-                <Value>
-                  <Key>other</Key>
-                  <Name>Other</Name>
-                </Value>
               </ValueSpace>
             </Widget>
           </Row>
@@ -1255,7 +1254,7 @@ function processInputs() {
       console.error(`Missing Issues for Category: ${item}`);
       result = false;
     }
-    if (categories[item].issues.length > 4) {
+    if (categories[item].issues.length > 5) {
       console.error(`Too Many Issues for Category: ${item}`);
       result = false;
     }
