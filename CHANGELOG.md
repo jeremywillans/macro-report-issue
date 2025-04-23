@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.4
+- Fix Other issue not correctly submitting for SNOW Incident 
+- Include Other Issue in Categories listing
+
 ## 0.0.3
 - Post-Call Survey is now **disabled** by default (callEnabled attribute)
 - Show Reporter above comments
