@@ -954,7 +954,7 @@ async function postIncident() {
   // Merge Extra Params from Selected Category Issue
   if (q.category) {
     const findIssue = categories[q.category].issues.find((item) => item.id === q.issue);
-    if (findIssue.snowExtra) {
+    if (findIssue && findIssue.snowExtra) {
       messageContent = { ...messageContent, ...findIssue.snowExtra };
     }
   }
