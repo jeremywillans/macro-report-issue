@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.5
+- Implement option for button icon
+- Wording improvements.
+- README update.
+
 ## 0.0.4
 - Fix Other issue not correctly submitting for SNOW Incident 
 - Include Other Issue in Categories listing

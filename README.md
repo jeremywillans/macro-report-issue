@@ -5,10 +5,10 @@ Macro for capturing a users experience after a call and reporting an issue from 
 Interactive Panel provides a guided experience for users to select the appropriate Category and Issue for reporting issues.
 
 Captured data can be sent to the following destinations
+- Service Now Incident
 - Webex Messaging Space
 - MS Teams 'Team' Channel
 - HTTP Server (such as Power Bi)
-- Service Now Incident
 
 Does not require all questions to be completed for data to be captured, any data entered will be used for processing.
 
@@ -27,36 +27,34 @@ When integrating with Service Now, this macro provides the following built in op
 ![img2.png](img/img2.png)
 ![img3.png](img/img3.png)
 
-
-
 ### Service Processing
 
 The following table outlines how responses are processed for enabled services
 
-`callEnabled` - Controls if Port-Call Survey will be shown
-`buttonEnabled` - Controls if Report Issue button is added to the Touch Panel
+- `callEnabled` - Controls if Port-Call Survey will be shown
+- `buttonEnabled` - Controls if Report Issue button is added to the Touch Panel
 
 | Service | Option | Outcome
 | ---- | ---- | ----
-| Webex | Any* | Message will be sent if Survey contains Comments
+| Webex | Any* | Message will be sent if contains Comments
+| Webex | Report Issue | Message will be sent, optionally to a separate space if defined by `webexReportRoomId / webexReportWebhook`
 | Webex | Survey - Excellent |  Message will be sent if `webexLogExcellent` is enabled
 | Webex | Survey - Average/Poor | Message will be sent
-| Webex | Report Issue | Message will be sent, optionally to a separate space if defined by `webexReportRoomId`
-| MS Teams | Any* | Message will be sent if Survey contains Comments
+| MS Teams | Any* | Message will be sent if contains Comments
+| MS Teams | Report Issue | Message will be sent, optionally to a separate channel if defined by `teamsReportWebhook`
 | MS Teams | Survey - Excellent |  Message will be sent if `teamsLogExcellent` is enabled
 | MS Teams | Survey - Average/Poor | Message will be sent
-| MS Teams | Report Issue | Message will be sent, optionally to a separate channel if defined by `teamsReportWebhook`
+| Service Now | Report Issue | `snowTicketReport` Disabled - Incident is raised<br>`snowTicketReport` Enabled - Incident is raised if Raise Incident option is selected on Panel
 | Service Now | Survey - Excellent | No Incident will be raised
 | Service Now | Survey - Average  | `snowTicketCall` Disabled - Incident is raised if `snowRaiseAverage` is enabled<br>`snowTicketCall` Enabled - Incident is raised if Raise Incident option is selected on Panel
 | Service Now | Survey - Poor | `snowTicketCall` Disabled - Incident is raised<br>`snowTicketCall` Enabled - Incident is raised if Raise Incident option is selected on Panel
-| Service Now | Report Issue | `snowTicketReport` Disabled - Incident is raised<br>`snowTicketReport` Enabled - Incident is raised if Raise Incident option is selected on Panel
 | HTTP Server | Any | Output will always be sent to the HTTP Server
 
 ## Prerequisites
 
 The following items are needed, depending on the enabled services.
 
-### Webex Spaces**
+### Webex Spaces
 This integration supports either the [Incoming Webhook Integration](https://apphub.webex.com/applications/incoming-webhooks-cisco-systems-38054-23307-75252) or using a  Bot to send Webex messages.
 #### Incoming Webhook
 - One or two new or existing Webex Spaces with the webhook configured
@@ -79,15 +77,18 @@ Note: You can optionally define two different spaces for Call Feedback vs Report
 - `teamsWebhook` is the default webhook used to send Teams Messages
 - Defining `teamsReportWebhook` with an alternative webhook will send Report Issue messages (from the Report Issue button) to this separate channel
 
-**Service Now**
+### Service Now
 - A User account with the `sn_incident_write` permission
 - If using CMDB and User Lookup options, the user account will also require read permission to these.
 - The URL of your Service Now instance
 - Credentials for the above user account, encoded in Base64 in the following format `username:password`
 - Macro searching CMDB using Serial Number to match CI Entity
-- Extra Parameters (such as Assignment group) can also be passed to Service Now
+- Extra Parameters (such as Assignment group) can also be passed to Service Now and follow this hierarchy
+  - Globally (defined in Macro options)
+  - Category level (defined per category)
+  - Issue level (defined per issue)
 
-**HTTP JSON**
+### HTTP JSON
 - A remote service capable of receiving HTTP POST messages, including Power BI Streaming Dataset.
 - The following format is used for the JSON Message
   ```
@@ -103,7 +104,7 @@ Note: You can optionally define two different spaces for Call Feedback vs Report
 
 1. Download the macro file from this Repository - `ReportIssue.js`
 2. Update the Parameters and Enabled Services, outlined at the top of the Macro and detailed below.
- - Recommend enabling `debugButtons` (outlined below) to assist with initial testing.
+ - Recommend enabling `debugButton` (outlined below) to assist with initial testing.
 3. Upload to to your Cisco device and activate.
 4. Use the buttons on the Touch Panel to test (debug and Report Issue, if enabled)
 5. If enabled, make a test call (noting the minimum duration configured) and validate the Survey is shown.
@@ -139,6 +140,7 @@ This action button can be deployed by enabling the `debugButton` option
 | buttonEnabled | bool | `true` | Include a Report Issue button on screen
 | buttonLocation | str | `HomeScreenAndCallControls` | Visible location of Report Issue button <br>**Options:** HomeScreen, HomeScreenAndCallControls, ControlPanel
 | buttonPosition | num | `1` | Button order position
+| buttonIcon | str | `Concierge` | Icon for Report Issue / Debug buttons
 | buttonColor | str | `#1170CF` | Color code of button, default blue
 | **Webex Messaging**
 | webexEnabled | bool | `false` | Enable for Webex Space Message Logging

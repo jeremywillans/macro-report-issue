@@ -42,6 +42,7 @@ const o = {
   buttonEnabled: true, // Include a Report Issue button on screen
   buttonLocation: 'HomeScreenAndCallControls', // Valid HomeScreen,HomeScreenAndCallControls,ControlPanel
   buttonPosition: 1, // Button order position
+  buttonIcon: 'Concierge', // Icon for Report Issue / Debug buttons
   buttonColor: '#1170CF', // Color of button, default blue
   // Webex Space Parameters
   webexEnabled: false, // Enable for Webex Space Message Logging
@@ -79,7 +80,7 @@ const o = {
   snowCmdbCi: '', // Default CMDB CI, needs to be sys_id of CI
   snowCmdbLookup: true, // Lookup Device using Serial Number in Service Now
   snowExtra: { // Any extra parameters to pass to Service Now
-    // assignment_group: '',
+    // assignment_group: '', // Field value can be Name or sys_id
   },
   // Global Parameters
   defaultSubmit: true, // Send post call results if not explicitly submitted (timeout)
@@ -114,11 +115,11 @@ const categories = {
     prompt: `${o.panelEmoticons ? '📹 ' : ''}Video`,
     issues: [
       { id: 'inbound-video', text: 'Issue with remote video' },
-      { id: 'outbound-video', text: 'Remote participants cant see me' },
+      { id: 'outbound-video', text: 'Remote participants cannot see me' },
       { id: 'video-quality', text: 'Bad video quality' },
-      { id: 'item-4', text: 'Item 4' },
       { id: 'other', text: 'Other' },
     ],
+    // Category level SNOW field
     // snowExtra: { assignment_group: 'sys_id-of-assignment-group' },
   },
   audio: {
@@ -126,10 +127,11 @@ const categories = {
     prompt: `${o.panelEmoticons ? '🎙️ ' : ''}Audio`,
     issues: [
       { id: 'inbound-audio', text: 'Issue with remote audio' },
-      { id: 'outbound-audio', text: 'Remote participants cant hear me' },
+      { id: 'outbound-audio', text: 'Remote participants cannot hear me' },
       { id: 'audio-quality', text: 'Bad audio quality' },
       { id: 'other', text: 'Other' },
     ],
+    // Category level SNOW field
     // snowExtra: { assignment_group: 'sys_id-of-assignment-group' },
   },
   share: {
@@ -137,25 +139,29 @@ const categories = {
     prompt: `${o.panelEmoticons ? '📺 ' : ''}Share`,
     issues: [
       { id: 'share-issue', text: 'Unable to share' },
-      { id: 'outbound-content', text: 'Remote participants cant see my content' },
+      { id: 'outbound-content', text: 'Remote participants cannot see my content' },
       { id: 'content-quality', text: 'Bad content quality' },
       { id: 'other', text: 'Other' },
     ],
+    // Category level SNOW field
     // snowExtra: { assignment_group: 'sys_id-of-assignment-group' },
   },
   room: {
     text: 'Room Equipment',
     prompt: `${o.panelEmoticons ? '🪑 ' : ''}Room`,
     issues: [
-      // { id: 'equipment-issue', text: 'Equipment not working' },
-      { id: 'missing-equipment', text: 'Missing equipment' },
+      { id: 'missing-equipment', text: 'Missing cables or equipment' },
       {
         id: 'table-equipment',
-        text: 'Dirty table or chairs',
+        text: 'Broken cables or equipment',
+        // Issue level SNOW field
         // snowExtra: { assignment_group: 'sys_id-of-assignment-group' },
       },
+      { id: 'cleanliness', text: 'Cleanliness issue' },
+      { id: 'environmental', text: 'Environmental issue' },
       { id: 'other', text: 'Other' },
     ],
+    // Category level SNOW field
     // snowExtra: { assignment_group: 'sys_id-of-assignment-group' },
   },
 };
@@ -394,7 +400,7 @@ async function addPanel(newStage = false) {
         <PanelId>${panelId}</PanelId>
         <Origin>local</Origin>
         <Location>Hidden</Location>
-        <Icon>Concierge</Icon>
+        <Icon>${o.buttonIcon}</Icon>
         <Color>#FC5143</Color>
         <Name>Report Incident</Name>
         <ActivityType>Custom</ActivityType>
@@ -598,7 +604,7 @@ async function addButton() {
       <Order>${o.buttonPosition}</Order>
       <PanelId>${buttonId}</PanelId>
       <Location>${sysInfo.isRoomOS ? o.buttonLocation : 'ControlPanel'}</Location>
-      <Icon>Concierge</Icon>
+      <Icon>${o.buttonIcon}</Icon>
       <Color>${o.buttonColor}</Color>
       <Name>${l10n.buttonText}</Name>
       <ActivityType>Custom</ActivityType>
@@ -616,7 +622,7 @@ async function addDebugButton() {
     <Panel>
       <PanelId>${debugSurvey}</PanelId>
       <Location>${sysInfo.isRoomOS ? o.buttonLocation : 'ControlPanel'}</Location>
-      <Icon>Concierge</Icon>
+      <Icon>${o.buttonIcon}</Icon>
       <Name>Debug Survey</Name>
       <ActivityType>Custom</ActivityType>
     </Panel>
