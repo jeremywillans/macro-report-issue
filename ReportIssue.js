@@ -21,7 +21,7 @@
 // eslint-disable-next-line import/no-unresolved
 import xapi from 'xapi';
 
-const version = '0.0.4';
+const version = '0.0.5';
 
 // Macro Options
 const o = {
