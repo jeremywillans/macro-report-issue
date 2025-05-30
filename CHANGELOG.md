@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.6
+- Consolidate Button and Panel UI Elements
+- Fix MTR call matching
+- Improve support for Boards with paired Navigators
+- Update reporter emoticon
+
 ## 0.0.5
 - Implement option for button icon
 - Wording improvements.

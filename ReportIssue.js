@@ -21,7 +21,7 @@
 // eslint-disable-next-line import/no-unresolved
 import xapi from 'xapi';
 
-const version = '0.0.5';
+const version = '0.0.6';
 
 // Macro Options
 const o = {
@@ -105,6 +105,7 @@ const l10n = {
   ticketTerm: 'Incident', // Button terminology used for the Ticket
   userField: 'Username', // Terminology used on panel to represent user field
   userPlaceholder: 'Please provide your username', // Placeholder for User prompt
+  navigatorText: 'Please complete Feedback Survey on the Touchpanel', // Alert message shown on Board if Navigator connected
 };
 
 // Maximum of 4 Categories
@@ -199,7 +200,6 @@ const snowIncidentUrl = `https://${o.snowInstance}/api/now/table/incident`;
 const snowUserUrl = `https://${o.snowInstance}/api/now/table/sys_user`;
 const snowCMDBUrl = `https://${o.snowInstance}/api/now/table/cmdb_ci`;
 const catArray = Object.keys(categories);
-const buttonId = `${o.appName}-button-${version.replaceAll('.', '')}`;
 const panelId = `${o.appName}-panel-${version.replaceAll('.', '')}`;
 const debugSurvey = `${o.appName}-button-debugSurvey-${version.replaceAll('.', '')}`;
 const sysInfo = {};
@@ -213,12 +213,13 @@ let activeCall = false;
 let callMatched = false;
 let callDestination = false;
 let raiseTicket = false;
-let manualReport = false;
+let manualReport = true;
 let panelTimeout;
 let errorResult = false;
 let skipLog = true;
 let logPending = false;
 let panelStage = 0;
+let navigatorCheck = false;
 
 // Call Domains
 const vimtDomain = '@m.webex.com';
@@ -242,115 +243,6 @@ async function removePanel(PanelId, showLog = true) {
     console.error('Unable to remove Panel');
     console.debug(error.message ? error.message : error);
   }
-}
-
-// Reset Variables
-function resetVariables() {
-  if (o.logDetailed) console.debug('Resetting Panel Variables');
-  errorResult = false;
-  userInfo = {};
-  reportInfo = {};
-  showFeedback = true;
-  voluntaryRating = false;
-  raiseTicket = false;
-  manualReport = false;
-  skipLog = true;
-  panelStage = 0;
-  removePanel(panelId);
-  if (!activeCall) {
-    console.debug('Resetting Call Variables');
-    callMatched = false;
-    callDestination = false;
-    callInfo = {};
-    callType = '';
-  } else {
-    console.debug('Active Call - Skipping Call Variables Reset');
-  }
-}
-
-// Category Formatter
-function formatCategory(category, type = 'text') {
-  if (!categories[category]) return 'Unknown';
-  return categories[category][type];
-}
-
-// Issue Formatter
-function formatIssue(category, issue, type = 'text') {
-  if (!categories[category]) return 'Unknown';
-  const result = categories[category].issues.find((item) => item.id === issue);
-  if (result) {
-    return result[type];
-  }
-  return 'Unknown';
-}
-
-// Call Type Formatter
-function formatType(type) {
-  switch (type) {
-    case 'webex':
-      return 'Webex';
-    case 'endpoint':
-      return 'Device/User';
-    case 'vimt':
-      return 'Teams VIMT';
-    case 'msft':
-      return 'Teams WebRTC';
-    case 'google':
-      return 'Google WebRTC';
-    case 'zoom':
-      return 'Zoom';
-    case 'mtr':
-      return 'Microsoft Teams Call';
-    default:
-      return 'Unknown';
-  }
-}
-
-// Rating Formatter
-function formatRating(rating, type = false) {
-  const field = type || 'text';
-  switch (rating) {
-    case 5:
-      return ratings[2][field];
-    case 4:
-    case 3:
-      return ratings[1][field];
-    case 2:
-    case 1:
-      return ratings[0][field];
-    default:
-      return 'Unknown';
-  }
-}
-
-// Time Formatter
-function formatTime(seconds) {
-  const d = Math.floor((seconds / 3600) / 24);
-  const h = Math.floor((seconds / 3600) % 24);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 3600 % 60);
-  // eslint-disable-next-line no-nested-ternary
-  const dDisplay = d > 0 ? d + (d === 1 ? (h > 0 || m > 0 ? ' day, ' : ' day') : (h > 0 || m > 0 ? ' days, ' : ' days')) : '';
-  // eslint-disable-next-line no-nested-ternary
-  const hDisplay = h > 0 ? h + (h === 1 ? (m > 0 || s > 0 ? ' hour, ' : ' hour') : (m > 0 || s > 0 ? ' hours, ' : ' hours')) : '';
-  const mDisplay = m > 0 ? m + (m === 1 ? ' minute' : ' minutes') : '';
-  const sDisplay = s > 0 ? s + (s === 1 ? ' second' : ' seconds') : '';
-
-  if (m < 1) {
-    return `${dDisplay}${hDisplay}${mDisplay}${sDisplay}`;
-  }
-
-  return `${dDisplay}${hDisplay}${mDisplay}`;
-}
-
-// Handle Panel Timeout
-function setPanelTimeout() {
-  clearTimeout(panelTimeout);
-  panelTimeout = setTimeout(() => {
-    console.debug('Panel Timeout.. closing..');
-    xapi.Command.UserInterface.Extensions.Panel.Close();
-    resetVariables();
-  }, o.timeoutPanel * 1000);
 }
 
 function calculateRating() {
@@ -396,13 +288,12 @@ async function addPanel(newStage = false) {
     <Extensions>
       <Version>1.11</Version>
       <Panel>
-        <Order>1</Order>
+        <Order>${o.buttonPosition}</Order>
         <PanelId>${panelId}</PanelId>
-        <Origin>local</Origin>
-        <Location>Hidden</Location>
-        <Icon>${o.buttonIcon}</Icon>
-        <Color>#FC5143</Color>
-        <Name>Report Incident</Name>
+        <Location>${o.buttonEnabled ? sysInfo.isRoomOS ? o.buttonLocation : 'ControlPanel' : 'Hidden'}</Location>
+        <Icon>Concierge</Icon>
+        <Color>${o.buttonColor}</Color>
+        <Name>${l10n.buttonText}</Name>
         <ActivityType>Custom</ActivityType>
         <Page>
           <Name>${title}</Name>
@@ -522,7 +413,7 @@ async function addPanel(newStage = false) {
             <Name/>
             <Widget>
               <WidgetId>${o.widgetPrefix}reporter_text</WidgetId>
-              <Name>${o.panelEmoticons ? '📧 ' : ''}${reportInfo.reporter && reportInfo.reporter !== '' ? userDisplay : `${l10n.userField} (${userStatus}) &gt;`}</Name>
+              <Name>${o.panelEmoticons ? '👤 ' : ''}${reportInfo.reporter && reportInfo.reporter !== '' ? userDisplay : `${l10n.userField} (${userStatus}) &gt;`}</Name>
               <Type>Text</Type>
               <Options>size=3;fontSize=normal;align=right</Options>
             </Widget>
@@ -594,26 +485,117 @@ async function addPanel(newStage = false) {
   }
 }
 
-// Add Button to Codec
-async function addButton() {
-  if (o.logDetailed) console.debug(`Adding Report Issue Button: ${buttonId}`);
-  const xml = `<?xml version="1.0"?>
-  <Extensions>
-    <Version>1.11</Version>
-    <Panel>
-      <Order>${o.buttonPosition}</Order>
-      <PanelId>${buttonId}</PanelId>
-      <Location>${sysInfo.isRoomOS ? o.buttonLocation : 'ControlPanel'}</Location>
-      <Icon>${o.buttonIcon}</Icon>
-      <Color>${o.buttonColor}</Color>
-      <Name>${l10n.buttonText}</Name>
-      <ActivityType>Custom</ActivityType>
-    </Panel>
-  </Extensions>`;
-  await xapi.Command.UserInterface.Extensions.Panel.Save({ PanelId: buttonId }, xml);
+// Reset Variables
+function resetVariables() {
+  if (o.logDetailed) console.debug('Resetting Panel Variables');
+  errorResult = false;
+  userInfo = {};
+  reportInfo = {};
+  showFeedback = true;
+  voluntaryRating = false;
+  raiseTicket = false;
+  manualReport = true;
+  skipLog = true;
+  panelStage = 0;
+  addPanel();
+  xapi.Command.UserInterface.Extensions.Widget.UnsetValue({ WidgetId: `${o.widgetPrefix}category` });
+  if (!activeCall) {
+    console.debug('Resetting Call Variables');
+    callMatched = false;
+    callDestination = false;
+    callInfo = {};
+    callType = '';
+  } else {
+    console.debug('Active Call - Skipping Call Variables Reset');
+  }
 }
 
-// Add Debug Buttons to Codec
+// Category Formatter
+function formatCategory(category, type = 'text') {
+  if (!categories[category]) return 'Unknown';
+  return categories[category][type];
+}
+
+// Issue Formatter
+function formatIssue(category, issue, type = 'text') {
+  if (!categories[category]) return 'Unknown';
+  const result = categories[category].issues.find((item) => item.id === issue);
+  if (result) {
+    return result[type];
+  }
+  return 'Unknown';
+}
+
+// Call Type Formatter
+function formatType(type) {
+  switch (type) {
+    case 'webex':
+      return 'Webex';
+    case 'endpoint':
+      return 'Device/User';
+    case 'vimt':
+      return 'Teams VIMT';
+    case 'msft':
+      return 'Teams WebRTC';
+    case 'google':
+      return 'Google WebRTC';
+    case 'zoom':
+      return 'Zoom';
+    case 'mtr':
+      return 'Microsoft Teams Call';
+    default:
+      return 'Unknown';
+  }
+}
+
+// Rating Formatter
+function formatRating(rating, type = false) {
+  const field = type || 'text';
+  switch (rating) {
+    case 5:
+      return ratings[2][field];
+    case 4:
+    case 3:
+      return ratings[1][field];
+    case 2:
+    case 1:
+      return ratings[0][field];
+    default:
+      return 'Unknown';
+  }
+}
+
+// Time Formatter
+function formatTime(seconds) {
+  const d = Math.floor((seconds / 3600) / 24);
+  const h = Math.floor((seconds / 3600) % 24);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 3600 % 60);
+  // eslint-disable-next-line no-nested-ternary
+  const dDisplay = d > 0 ? d + (d === 1 ? (h > 0 || m > 0 ? ' day, ' : ' day') : (h > 0 || m > 0 ? ' days, ' : ' days')) : '';
+  // eslint-disable-next-line no-nested-ternary
+  const hDisplay = h > 0 ? h + (h === 1 ? (m > 0 || s > 0 ? ' hour, ' : ' hour') : (m > 0 || s > 0 ? ' hours, ' : ' hours')) : '';
+  const mDisplay = m > 0 ? m + (m === 1 ? ' minute' : ' minutes') : '';
+  const sDisplay = s > 0 ? s + (s === 1 ? ' second' : ' seconds') : '';
+
+  if (m < 1) {
+    return `${dDisplay}${hDisplay}${mDisplay}${sDisplay}`;
+  }
+
+  return `${dDisplay}${hDisplay}${mDisplay}`;
+}
+
+// Handle Panel Timeout
+function setPanelTimeout() {
+  clearTimeout(panelTimeout);
+  panelTimeout = setTimeout(() => {
+    console.debug('Panel Timeout.. closing..');
+    xapi.Command.UserInterface.Extensions.Panel.Close();
+    resetVariables();
+  }, o.timeoutPanel * 1000);
+}
+
+// Add Debug Button to Codec
 async function addDebugButton() {
   if (o.logDetailed) console.debug(`Adding Debug Button: ${debugSurvey}`);
   const xml = `<?xml version="1.0"?>
@@ -1072,6 +1054,7 @@ async function processCall() {
     // No Active Call
     return;
   }
+  if (!call) return;
 
   if (call.Protocol && call.Protocol === 'WebRTC') {
     callType = 'webrtc';
@@ -1141,18 +1124,11 @@ function showRating(updateRating = false) {
   });
 }
 
-async function initialPanel() {
-  await addPanel(0);
-  await sleep(200);
-  await xapi.Command.UserInterface.Extensions.Widget.UnsetValue({ WidgetId: `${o.widgetPrefix}category` });
-  xapi.Command.UserInterface.Extensions.Panel.Open({ PanelId: panelId });
-  setPanelTimeout();
-}
-
 // Process after Call Disconnect
 function processDisconnect() {
   activeCall = false;
-  if (callInfo.Duration > o.minDuration || manualReport) {
+  if (callInfo.Duration > o.minDuration) {
+    manualReport = false;
     showRating();
   } else {
     resetVariables();
@@ -1310,6 +1286,7 @@ xapi.Event.UserInterface.Extensions.Widget.Action.on(async (event) => {
       break;
     case `${o.widgetPrefix}category`:
       setPanelTimeout();
+      xapi.Command.UserInterface.Message.TextLine.Clear();
       reportInfo.category = event.Value;
       if (o.logDetailed) console.debug(`Category updated to: ${reportInfo.category}`);
       await addPanel(1);
@@ -1328,6 +1305,7 @@ xapi.Event.UserInterface.Extensions.Widget.Action.on(async (event) => {
       await xapi.Command.UserInterface.Extensions.Widget.UnsetValue({ WidgetId: `${o.widgetPrefix}issue` });
       break;
     case `${o.widgetPrefix}rating_edit`: {
+      xapi.Command.UserInterface.Message.TextLine.Clear();
       showRating(true);
       break;
     }
@@ -1337,7 +1315,7 @@ xapi.Event.UserInterface.Extensions.Widget.Action.on(async (event) => {
       addPanel();
       if (raiseTicket && o.userSuggest && (!reportInfo.reporter || reportInfo.reporter === '')) {
         setPanelTimeout();
-        showTextInput(`${o.widgetPrefix}reporter_edit`, '⚠️ Missing Reporter ⚠️', `Please include your ${l10n.userField} to include in the ${l10n.ticketTerm}`);
+        showTextInput(`${o.widgetPrefix}reporter_edit`, '⚠️ Missing Reporter ⚠️', `Please provide your ${l10n.userField} to include in the ${l10n.ticketTerm}`);
         return;
       }
       if (o.logDetailed) console.debug(`Raise Ticket: ${raiseTicket}`);
@@ -1354,11 +1332,10 @@ xapi.Event.UserInterface.Extensions.Widget.Action.on(async (event) => {
 
 // Process Button Click Events
 xapi.Event.UserInterface.Extensions.Panel.Clicked.on(async (event) => {
-  if (event.PanelId === buttonId) {
-    manualReport = true;
+  if (event.PanelId === panelId) {
     raiseTicket = !o.snowTicketReport;
     skipLog = !o.uploadLogsReport;
-    initialPanel();
+    setPanelTimeout();
     return;
   }
   if (event.PanelId !== debugSurvey) return;
@@ -1374,7 +1351,7 @@ xapi.Event.UserInterface.Extensions.Panel.Clicked.on(async (event) => {
 });
 
 // Process Page Closed
-xapi.Event.UserInterface.Extensions.Event.PageClosed.on((event) => {
+xapi.Event.UserInterface.Extensions.Event.PageClosed.on(async (event) => {
   // ignore other page events
   if (event.PageId !== `${panelId}-survey`) return;
   // ignore if survey was submitted
@@ -1385,6 +1362,7 @@ xapi.Event.UserInterface.Extensions.Event.PageClosed.on((event) => {
     processRequest();
     return;
   }
+  await sleep(200);
   clearTimeout(panelTimeout);
   resetVariables();
 });
@@ -1458,7 +1436,7 @@ xapi.Event.UserInterface.Message.TextInput.Clear.on((event) => {
 });
 
 // Process Rating Response
-xapi.Event.UserInterface.Message.Rating.Response.on((event) => {
+xapi.Event.UserInterface.Message.Rating.Response.on(async (event) => {
   switch (event.FeedbackId) {
     case `${o.widgetPrefix}rating_submit`:
     case `${o.widgetPrefix}rating_update`:
@@ -1469,6 +1447,7 @@ xapi.Event.UserInterface.Message.Rating.Response.on((event) => {
         processRequest();
         return;
       }
+      addPanel();
       // Determine Raise Ticket status from rating if snowTicketCall disabled
       if (!o.snowTicketCall) {
         // Raise Ticket for Rating 1 and 2
@@ -1480,7 +1459,19 @@ xapi.Event.UserInterface.Message.Rating.Response.on((event) => {
       }
       xapi.Command.UserInterface.Message.Rating.Clear({ FeedbackId: event.FeedbackId });
       if (event.FeedbackId === `${o.widgetPrefix}rating_submit`) {
-        initialPanel();
+        if (navigatorCheck) {
+          let navigators = await xapi.status.get('Peripherals ConnectedDevice');
+          navigators = navigators.filter((i) => i.Status === 'Connected');
+          const navController = navigators.some((i) => i.Role === 'Controller');
+          if (navController) {
+            xapi.Command.UserInterface.Message.TextLine.Display({
+              Text: l10n.navigatorText,
+              Duration: 10,
+            });
+          }
+        }
+        xapi.Command.UserInterface.Extensions.Panel.Open({ PanelId: panelId });
+        setPanelTimeout();
         return;
       }
       addPanel();
@@ -1533,6 +1524,8 @@ xapi.Status.MicrosoftTeams.Calling.InCall.on((status) => {
     callType = 'mtr';
     callInfo.startTime = Date.now();
     activeCall = true;
+    callMatched = true;
+    if (o.logDetailed) console.debug(`[${callType}] Microsoft Teams Call`);
   } else {
     if (callInfo.startTime) {
       try {
@@ -1551,7 +1544,6 @@ function macroReset() {
   xapi.Command.UserInterface.Extensions.Panel.Close();
   xapi.Command.UserInterface.Message.TextInput.Clear();
   removePanel(panelId, false);
-  removePanel(buttonId, false);
   removePanel(debugSurvey, false);
 }
 
@@ -1603,6 +1595,13 @@ async function init() {
     if (!sysInfo.name || sysInfo.name === '') {
       sysInfo.name = sysInfo.serial;
     }
+    // Get codec platform
+    sysInfo.platform = await xapi.status.get('SystemUnit.ProductPlatform');
+    // if matches desk or board series, flag that paired nagivagtor needs to be checked
+    if (sysInfo.platform.toLowerCase().includes('desk') || sysInfo.platform.toLowerCase().includes('board')) {
+      if (o.logDetailed) console.debug('Device matches Desk or Board Series.');
+      navigatorCheck = true;
+    }
     // HTTP Client needed for sending outbound requests
     await xapi.Config.HttpClient.Mode.set('On');
     // Check for SNOW CMDB CI
@@ -1626,7 +1625,7 @@ async function init() {
     }
     // Validate Button
     if (o.buttonEnabled) {
-      await addButton();
+      await addPanel();
     }
     // Validate Debug Button
     if (o.debugButton) {

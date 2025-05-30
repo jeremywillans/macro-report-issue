@@ -31,7 +31,7 @@ When integrating with Service Now, this macro provides the following built in op
 
 The following table outlines how responses are processed for enabled services
 
-- `callEnabled` - Controls if Port-Call Survey will be shown
+- `callEnabled` - Controls if Post-Call Survey will be shown
 - `buttonEnabled` - Controls if Report Issue button is added to the Touch Panel
 
 | Service | Option | Outcome
