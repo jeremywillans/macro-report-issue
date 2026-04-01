@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.7
+- Add support for ServiceNow API key authentication
+- Increase default panel and popup timeouts to 30 seconds
+
 ## 0.0.6
 - Consolidate Button and Panel UI Elements
 - Fix MTR call matching

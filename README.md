@@ -1,5 +1,7 @@
 # Report Issue
 
+![RoomOS-Compatible](https://img.shields.io/badge/RoomOS-Compatible-green.svg?style=for-the-badge&logo=cisco) ![MTR-Compatible](https://img.shields.io/badge/MTR-Compatible-green.svg?style=for-the-badge&logo=microsoftteams)
+
 A Cisco RoomOS Macro for capturing post-call feedback and allowing users to report room issues directly from the touch panel.
 
 It provides a guided workflow for collecting ratings, issue categories, comments, and optional reporter details, then sending that data to one or more destinations.

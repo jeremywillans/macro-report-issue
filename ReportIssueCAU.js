@@ -21,7 +21,7 @@
 // eslint-disable-next-line import/no-unresolved
 import xapi from 'xapi';
 
-const version = '0.0.7';
+const version = '0.0.6';
 
 // Macro Options
 const o = {
@@ -45,12 +45,12 @@ const o = {
   buttonIcon: 'Concierge', // Icon for Report Issue / Debug buttons
   buttonColor: '#1170CF', // Color of button, default blue
   // Webex Space Parameters
-  webexEnabled: false, // Enable for Webex Space Message Logging
+  webexEnabled: true, // Enable for Webex Space Message Logging
   webexLogExcellent: false, // Optionally log excellent results to Webex Space
   webexBotToken: '', // Webex Bot Token for sending messages
   webexRoomId: '', // Webex Room Id for sending messages
   webexReportRoomId: '', // If defined, Report Issue messages will be sent here.
-  webexWebhook: '', // Webex Incoming Webhook for sending messages
+  webexWebhook: 'https://webexapis.com/v1/webhooks/incoming/Y2lzY29zcGFyazovL3VzL1dFQkhPT0svM2M4ODQ4NDctNzk4My00MjhlLTg5ZjUtZjhhNGI1MTAwOTE2', // Webex Incoming Webhook for sending messages
   webexReportWebhook: '', // If defined, Report Issue messages will be sent to this webhook.
   // MS Teams Channel Parameters
   teamsEnabled: false, // Send message to MS Teams channel when room released
@@ -63,7 +63,7 @@ const o = {
   httpAuth: false, // Destination requires HTTP Header for Authentication
   httpHeader: 'Authorization: XXXX', // Header Content for HTTP POST Authentication
   // Service Now Parameters
-  snowEnabled: false, // Enable for Service NOW Incident Raise
+  snowEnabled: true, // Enable for Service NOW Incident Raise
   snowTicketCall: true, // Enabled UI Checkbox to Raise Ticket for Call Survey
   snowTicketReport: false, // Enable UI Checkbox to Raise Ticket for Report Issue
   snowRaiseAverage: false, // Enabled to raise Incident for Average Survey response (3/4 stars)
@@ -74,23 +74,22 @@ const o = {
   //
   // Note: snowRaiseAverage is overridden by snowTicketCall if enabled.
   //
-  snowInstance: 'xxxx.service-now.com', // ServiceNow instance hostname
-  snowApiKey: '', // ServiceNow API key for header-based authentication
-  snowCredentials: '', // Base64-encoded "username:password" string for basic authentication
-  snowCallerId: '', // Default Caller for Incidents, needs to be sys_id of Caller
+  snowInstance: 'ven08946.service-now.com', // Specify the base url for Service Now
+  snowCredentials: 'cm9vbW9zOkNpc2NvMjM0IQ==', // Basic Auth format is "username:password" base64-encoded
+  snowCallerId: '0649e8211b5336904e6c54a0604bcb24', // Default Caller for Incidents, needs to be sys_id of Caller
   snowCmdbCi: '', // Default CMDB CI, needs to be sys_id of CI
   snowCmdbLookup: true, // Lookup Device using Serial Number in Service Now
   snowExtra: { // Any extra parameters to pass to Service Now
-    // assignment_group: '', // Field value can be Name or sys_id
+    assignment_group: 'Video Support', // Field value can be Name or sys_id
   },
   // Global Parameters
   defaultSubmit: true, // Send post call results if not explicitly submitted (timeout)
-  uploadLogsCallPoor: true, // Enables auto uploading of logs when a poor rating is given,
+  uploadLogsCallPoor: false, // Enables auto uploading of logs when a poor rating is given,
   uploadLogsCallAverage: false, // Enables auto uploading of logs when an average rating is given
   uploadLogsReport: false, // Enables auto uploading of logs when submitting a report issue
   // Timeout Parameters
-  timeoutPanel: 30,
-  timeoutPopup: 30,
+  timeoutPanel: 20,
+  timeoutPopup: 10,
   // Logging Parameters
   logDetailed: true, // Enable detailed logging
   logUnknownResponses: false, // Show unknown extension responses in the log
@@ -195,12 +194,7 @@ const Header = [
   'Accept: application/json',
 ];
 const webexHeader = [...Header, `Authorization: Bearer ${o.webexBotToken}`];
-let snowHeader;
-if (o.snowApiKey) {
-  snowHeader = [...Header, `x-sn-apikey: ${o.snowApiKey}`];
-} else {
-  snowHeader = [...Header, `Authorization: Basic ${o.snowCredentials}`];
-}
+const snowHeader = [...Header, `Authorization: Basic ${o.snowCredentials}`];
 const httpHeader = o.httpAuth ? [...Header, o.httpHeader] : [...Header];
 const snowIncidentUrl = `https://${o.snowInstance}/api/now/table/incident`;
 const snowUserUrl = `https://${o.snowInstance}/api/now/table/sys_user`;

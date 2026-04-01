@@ -52,7 +52,8 @@ Ways to get a Webex Room ID:
 - A ServiceNow account with `sn_incident_write`
 - Read access to CMDB and user records if lookup features are enabled
 - Your ServiceNow instance hostname
-- Base64-encoded credentials in `username:password` format
+- ServiceNow API key (recommended; see configuration steps below)
+- Base64-encoded `username:password` credentials for basic authentication (legacy option)
 - Optional default caller and default CI `sys_id` values
 
 ServiceNow extra fields can be applied in this order:
@@ -60,6 +61,16 @@ ServiceNow extra fields can be applied in this order:
 - Globally in macro options
 - At category level
 - At issue level
+
+#### ServiceNow API Authentication
+
+Refer to [this guide](https://www.servicenow.com/docs/r/platform-security/authentication/configure-api-key.html) for steps to configure header-based API key authentication.
+
+- Include the `x-sn-apikey` header when creating the Inbound Authentication Profile
+- Select `Table API` when creating the REST API Access Policy
+- If you also need basic authentication, create an HTTP Basic Auth profile and assign it to the same REST API Access Policy
+
+**Note:** Review any configuration changes with your ServiceNow administrator.
 
 ### HTTP JSON
 
@@ -229,7 +240,8 @@ debugButton: true,
 | snowUserRequired | bool | `false` | Requires a user when raising a ticket |
 | snowUserField | string | `user_name` | ServiceNow field used for user lookup |
 | snowInstance | string | `xxxx.service-now.com` | ServiceNow instance hostname |
-| snowCredentials | string | `` | Base64-encoded basic auth credentials |
+| snowApiKey | string | `` | ServiceNow API key for header-based authentication |
+| snowCredentials | string | `` | Base64-encoded basic auth credentials (legacy option) |
 | snowCallerId | string | `` | Default caller `sys_id` |
 | snowCmdbCi | string | `` | Default CMDB CI `sys_id` |
 | snowCmdbLookup | bool | `true` | Looks up the device in ServiceNow by serial number |
