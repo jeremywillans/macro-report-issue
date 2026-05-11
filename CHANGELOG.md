@@ -3,7 +3,7 @@
 ## 0.0.8
 - Fix Panel Icon selection
 - Fix Reporter text placeholder
-- Align ackowledgement popup timeout
+- Align acknowledgement popup timeout
 - Update debug call duration based on parameter
 
 ## 0.0.7
