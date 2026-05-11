@@ -1,6 +1,6 @@
 {
   "name": "macro-report-issue",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Report Issue Macro for Cisco Video Endpoints",
   "main": "ReportIssue.js",
   "scripts": {

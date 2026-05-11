@@ -21,7 +21,7 @@
 // eslint-disable-next-line import/no-unresolved
 import xapi from 'xapi';
 
-const version = '0.0.7';
+const version = '0.0.8';
 
 // Macro Options
 const o = {
@@ -297,7 +297,7 @@ async function addPanel(newStage = false) {
         <Order>${o.buttonPosition}</Order>
         <PanelId>${panelId}</PanelId>
         <Location>${o.buttonEnabled ? sysInfo.isRoomOS ? o.buttonLocation : 'ControlPanel' : 'Hidden'}</Location>
-        <Icon>Concierge</Icon>
+        <Icon>${o.buttonIcon}</Icon>
         <Color>${o.buttonColor}</Color>
         <Name>${l10n.buttonText}</Name>
         <ActivityType>Custom</ActivityType>
@@ -1029,11 +1029,10 @@ async function processRequest() {
   if (showFeedback) {
     let Title = 'Acknowledgement';
     let Text = 'Thanks for your feedback!';
-    let Duration = 15;
+    const Duration = o.timeoutPopup;
     if (errorResult) {
       Title = 'Error Encountered';
       Text = 'Sorry we were unable to complete this request.<br>Please advise your IT Support team of this error.';
-      Duration = 20;
     }
     if (reportInfo.incident) {
       Text += `<br>${l10n.ticketTerm} ${reportInfo.incident} raised.`;
@@ -1175,7 +1174,7 @@ function showTextInput(promptId, overrideTitle = false, overrideText = false) {
     }
     case `${o.widgetPrefix}reporter_edit`: {
       promptBody.FeedbackId = `${o.widgetPrefix}reporter_submit`;
-      promptBody.Placeholder = `Enter your ${l10n.userPlaceholder}`;
+      promptBody.Placeholder = l10n.userPlaceholder;
       promptBody.Text = `Please provide your ${l10n.userField}`;
       promptBody.Title = `${manualReport ? l10n.issuePrefix : l10n.feedbackPrefix} ${l10n.userField}`;
       // Populate field if previously added
@@ -1348,7 +1347,7 @@ xapi.Event.UserInterface.Extensions.Panel.Clicked.on(async (event) => {
   if (!o.debugButton) return;
   console.info(`Debug Button Triggered - ${event.PanelId}`);
   callType = sysInfo.isRoomOS ? 'webex' : 'mtr';
-  callInfo.Duration = 17;
+  callInfo.Duration = o.minDuration + 5;
   if (sysInfo.isRoomOS) {
     callInfo.CauseType = 'LocalDisconnect';
     callDestination = 'spark:123456789@webex.com';

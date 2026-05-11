@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.8
+- Fix Panel Icon selection
+- Fix Reporter text placeholder
+- Align ackowledgement popup timeout
+- Update debug call duration based on parameter
+
 ## 0.0.7
 - Add support for ServiceNow API key authentication
 - Increase default panel and popup timeouts to 30 seconds
