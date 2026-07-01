@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.0.9
+- Add SNOW Display Name searching
+
 ## 0.0.8
 - Fix Panel Icon selection
 - Fix Reporter text placeholder

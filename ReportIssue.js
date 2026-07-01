@@ -21,7 +21,7 @@
 // eslint-disable-next-line import/no-unresolved
 import xapi from 'xapi';
 
-const version = '0.0.8';
+const version = '0.0.9';
 
 // Macro Options
 const o = {
@@ -71,6 +71,10 @@ const o = {
   snowUserAppend: '', // Allows appending string (such as @domain) during lookup
   snowUserRequired: false, // Require user when raising a ticket in SNOW
   snowUserField: 'user_name', // Field to perform lookup from Service Now (alt is email)
+  snowUserDisplayLookup: true, // Search display name if exact user lookup is not confident
+  snowUserDisplayField: 'name', // ServiceNow display-name field used for fallback search
+  snowUserDisplaySearchMode: 'startsWith', // Display search mode: startsWith or contains
+  snowUserDisplayLimit: 4, // Maximum selectable user options before "Refine Search"
   //
   // Note: snowRaiseAverage is overridden by snowTicketCall if enabled.
   //
@@ -104,8 +108,11 @@ const l10n = {
   issuePrefix: 'Report Issue', // Prefix shown for report issue titles
   feedbackPrefix: 'Feedback', // Prefix shown for call survey feedback titles
   ticketTerm: 'Incident', // Button terminology used for the Ticket
-  userField: 'Username', // Terminology used on panel to represent user field
-  userPlaceholder: 'Please provide your username', // Placeholder for User prompt
+  userField: 'Reporter', // Terminology used on panel to represent user field
+  userPlaceholder: 'Username or Display Name', // Placeholder for User prompt
+  userSearchText: 'Search by Username or Display Name', // Text shown when searching for a reporter
+  userSelectText: 'Please select the correct', // Text shown when selecting a reporter
+  userRefineText: 'Refine Search', // Option shown when reporter search results are not correct
   navigatorText: 'Please complete Feedback Survey on the Touchpanel', // Alert message shown on Board if Navigator connected
 };
 
@@ -210,6 +217,7 @@ const panelId = `${o.appName}-panel-${version.replaceAll('.', '')}`;
 const debugSurvey = `${o.appName}-button-debugSurvey-${version.replaceAll('.', '')}`;
 const sysInfo = {};
 let userInfo = {};
+let snowUserMatches = [];
 let reportInfo = {};
 let callInfo = {};
 let callType = '';
@@ -496,6 +504,7 @@ function resetVariables() {
   if (o.logDetailed) console.debug('Resetting Panel Variables');
   errorResult = false;
   userInfo = {};
+  snowUserMatches = [];
   reportInfo = {};
   showFeedback = true;
   voluntaryRating = false;
@@ -647,7 +656,7 @@ async function postWebex() {
   if (!manualReport && o.defaultSubmit) { html += `<br><b>Voluntary Rating:</b> ${voluntaryRating ? 'Yes' : 'No'}`; }
   if (reportInfo.incident) { html += `<br><b>Incident Reference:</b> ${reportInfo.incident}`; }
   if (userInfo.sys_id) {
-    html += `<br><b>Reporter:</b>  <a href=webexteams://im?email=${userInfo.email}>${userInfo.name}</a> (${userInfo.email})`;
+    html += `<br><b>${l10n.userField}:</b>  <a href=webexteams://im?email=${userInfo.email}>${userInfo.name}</a> (${userInfo.email})`;
   } else if (reportInfo.reporter) {
     // Include Provided Report Detail if not matched in SNOW
     html += `<br><b>Provided ${l10n.userField} :</b> ${reportInfo.reporter}`;
@@ -787,7 +796,7 @@ async function postTeams() {
   if (reportInfo.incident) facts.push({ title: 'Incident Reference', value: reportInfo.incident });
 
   if (userInfo.sys_id) {
-    facts.push({ title: 'Reporter', value: `${userInfo.name} (${userInfo.email})` });
+    facts.push({ title: l10n.userField, value: `${userInfo.name} (${userInfo.email})` });
   } else if (reportInfo.reporter) {
     // Include Provided Email if not matched in SNOW
     facts.push({ title: `Provided ${l10n.userField}`, value: reportInfo.reporter });
@@ -1150,6 +1159,107 @@ function processDisconnect() {
   }
 }
 
+// Format SNOW user option for prompt display
+function formatSnowUserOption(user) {
+  const userDetail = user.email || user.user_name;
+  return userDetail ? `${user.name} (${userDetail})` : user.name;
+}
+
+// Store selected SNOW user for downstream incident creation
+function selectSnowUser(user, reporter) {
+  userInfo = user;
+  reportInfo.reporter_display = formatSnowUserOption(user);
+  if (o.logDetailed) console.debug(`SNOW User Found - ${userInfo.name} (${reporter})`);
+}
+
+// Build fallback query for active users using configured display-name search mode
+function buildSnowUserDisplayQuery(reporter) {
+  const searchOperators = {
+    startsWith: 'STARTSWITH',
+    contains: 'LIKE',
+  };
+  let searchOperator = searchOperators[o.snowUserDisplaySearchMode];
+  if (!searchOperator) {
+    searchOperator = searchOperators.startsWith;
+    if (o.logDetailed) console.warn(`Invalid SNOW display search mode: ${o.snowUserDisplaySearchMode}`);
+  }
+  return `active=true^${o.snowUserDisplayField}${searchOperator}${reporter.trim()}^ORDERBY${o.snowUserDisplayField}`;
+}
+
+// Query ServiceNow sys_user table
+async function lookupSnowUsers(url) {
+  const result = await xapi.Command.HttpClient.Get({ Header: snowHeader, Url: url });
+  return JSON.parse(result.Body).result;
+}
+
+// Prompt user to select from fallback SNOW display-name matches
+function showSnowUserSelectPrompt(matches) {
+  clearTimeout(panelTimeout);
+  snowUserMatches = matches.slice(0, o.snowUserDisplayLimit);
+  const promptBody = {
+    Duration: o.timeoutPopup,
+    FeedbackId: `${o.widgetPrefix}reporter_select`,
+    Text: `${l10n.userSelectText} ${l10n.userField}`,
+    Title: `Select ${l10n.userField}`,
+  };
+  snowUserMatches.forEach((user, index) => {
+    promptBody[`Option.${index + 1}`] = formatSnowUserOption(user);
+  });
+  promptBody[`Option.${snowUserMatches.length + 1}`] = l10n.userRefineText;
+  xapi.Command.UserInterface.Message.Prompt.Display(promptBody);
+}
+
+// Resolve reporter from exact SNOW lookup or fallback display-name search
+async function resolveSnowUser(reporter) {
+  snowUserMatches = [];
+  const user = `${reporter}${o.snowUserAppend}`;
+  try {
+    const exactUrl = `${snowUserUrl}?sysparm_limit=2&${o.snowUserField}=${encodeURIComponent(user)}`;
+    const result = await lookupSnowUsers(exactUrl);
+    if (result.length === 1) {
+      selectSnowUser(result[0], reporter);
+      return false;
+    }
+    if (!o.snowUserDisplayLookup) {
+      reportInfo.reporter_display = `${reporter} (${result.length === 0 ? 'Not Found' : 'Multiple Matches'})`;
+      return false;
+    }
+    if (o.logDetailed) {
+      const logText = result.length === 0 ? 'SNOW User Not Found' : `SNOW User matched ${result.length} results`;
+      console.debug(`${logText} - ${user}`);
+    }
+  } catch (error) {
+    console.error('unable to lookup SNOW user');
+    console.debug(error.message ? error.message : error);
+    return false;
+  }
+
+  try {
+    const displayQuery = buildSnowUserDisplayQuery(reporter);
+    const displayUrl = `${snowUserUrl}?sysparm_limit=${o.snowUserDisplayLimit + 1}&sysparm_fields=sys_id,name,email,user_name&sysparm_query=${encodeURIComponent(displayQuery)}`;
+    const displayMatches = await lookupSnowUsers(displayUrl);
+    if (displayMatches.length === 0) {
+      reportInfo.reporter_display = `${reporter} (Not Found)`;
+      if (o.logDetailed) console.debug(`SNOW Display Name Not Found - ${reporter}`);
+      return false;
+    }
+    if (displayMatches.length === 1) {
+      selectSnowUser(displayMatches[0], reporter);
+      return false;
+    }
+    if (displayMatches.length > o.snowUserDisplayLimit && o.logDetailed) {
+      console.debug(`SNOW Display Name matched more than ${o.snowUserDisplayLimit} results - ${reporter}`);
+    }
+    showSnowUserSelectPrompt(displayMatches);
+    return true;
+  } catch (error) {
+    console.error('unable to lookup SNOW users by display name');
+    console.debug(error.message ? error.message : error);
+    reportInfo.reporter_display = `${reporter} (Not Found)`;
+    return false;
+  }
+}
+
 // Show Text Input to User
 function showTextInput(promptId, overrideTitle = false, overrideText = false) {
   // Prevent Survey from closing when prompt open
@@ -1175,7 +1285,7 @@ function showTextInput(promptId, overrideTitle = false, overrideText = false) {
     case `${o.widgetPrefix}reporter_edit`: {
       promptBody.FeedbackId = `${o.widgetPrefix}reporter_submit`;
       promptBody.Placeholder = l10n.userPlaceholder;
-      promptBody.Text = `Please provide your ${l10n.userField}`;
+      promptBody.Text = l10n.userSearchText;
       promptBody.Title = `${manualReport ? l10n.issuePrefix : l10n.feedbackPrefix} ${l10n.userField}`;
       // Populate field if previously added
       if (reportInfo.reporter !== '') {
@@ -1205,12 +1315,12 @@ function showAlert(promptId, overrideTitle = false, overrideText = false) {
   switch (promptId) {
     case `${o.widgetPrefix}reporter_missing`: {
       promptBody.Text = `Please provide a valid ${l10n.userField}.`;
-      promptBody.Title = '⚠️ Missing Reporter ⚠️';
+      promptBody.Title = `⚠️ Missing ${l10n.userField} ⚠️`;
       break;
     }
     case `${o.widgetPrefix}reporter_invalid`: {
       promptBody.Text = `Unable to match the provided ${l10n.userField}<br>Please try again.`;
-      promptBody.Title = '⚠️ Invalid Reporter ⚠️';
+      promptBody.Title = `⚠️ Invalid ${l10n.userField} ⚠️`;
       break;
     }
     default:
@@ -1320,7 +1430,7 @@ xapi.Event.UserInterface.Extensions.Widget.Action.on(async (event) => {
       addPanel();
       if (raiseTicket && o.userSuggest && (!reportInfo.reporter || reportInfo.reporter === '')) {
         setPanelTimeout();
-        showTextInput(`${o.widgetPrefix}reporter_edit`, '⚠️ Missing Reporter ⚠️', `Please provide your ${l10n.userField} to include in the ${l10n.ticketTerm}`);
+        showTextInput(`${o.widgetPrefix}reporter_edit`, `⚠️ Missing ${l10n.userField} ⚠️`, `${l10n.userSearchText} to include a ${l10n.userField.toLowerCase()} in the ${l10n.ticketTerm}`);
         return;
       }
       if (o.logDetailed) console.debug(`Raise Ticket: ${raiseTicket}`);
@@ -1390,40 +1500,67 @@ xapi.Event.UserInterface.Message.TextInput.Response.on(async (event) => {
         return;
       }
       userInfo = {};
+      snowUserMatches = [];
       reportInfo.reporter = event.Text;
       reportInfo.reporter_display = false;
       if (o.snowEnabled && (o.snowUserLookup || o.snowUserRequired)) {
-        try {
-          const user = `${reportInfo.reporter}${o.snowUserAppend}`;
-          let result = await xapi.Command.HttpClient.Get(
-            { Header: snowHeader, Url: `${snowUserUrl}?sysparm_limit=1&${o.snowUserField}=${user}` },
-          );
-          result = JSON.parse(result.Body).result;
-          // Validate User Data
-          switch (result.length) {
-            case 0:
-              reportInfo.reporter_display = `${reportInfo.reporter} (Not Found)`;
-              if (o.logDetailed) console.debug(`SNOW User Not Found - ${user}`);
-              break;
-            case 1:
-              [userInfo] = result;
-              reportInfo.reporter_display = `${userInfo.name} (${reportInfo.reporter})`;
-              if (o.logDetailed) console.debug(`SNOW User Found - ${userInfo.name}`);
-              break;
-            default:
-              reportInfo.reporter_display = `${reportInfo.reporter} (Multiple Matches)`;
-              if (o.logDetailed) console.debug(`Query ${user} matched ${result.length} results`);
-          }
-        } catch (error) {
-          console.error('unable to lookup SNOW user');
-          console.debug(error.message ? error.message : error);
-        }
+        const userSelectPending = await resolveSnowUser(reportInfo.reporter);
+        if (userSelectPending) return;
       }
       addPanel(2);
       setPanelTimeout();
       break;
     default:
       if (o.logUnknownResponses) console.warn(`Unexpected TextInput.Response: ${event.FeedbackId}`);
+  }
+});
+
+// Process Prompt Response
+xapi.Event.UserInterface.Message.Prompt.Response.on(async (event) => {
+  switch (event.FeedbackId) {
+    case `${o.widgetPrefix}reporter_select`: {
+      const optionId = Number(event.OptionId);
+      if (optionId >= 1 && optionId <= o.snowUserDisplayLimit && snowUserMatches[optionId - 1]) {
+        selectSnowUser(snowUserMatches[optionId - 1], reportInfo.reporter);
+        snowUserMatches = [];
+        addPanel(2);
+        setPanelTimeout();
+        return;
+      }
+      if (optionId === snowUserMatches.length + 1) {
+        snowUserMatches = [];
+        userInfo = {};
+        const { reporter } = reportInfo;
+        reportInfo.reporter_display = `${reporter} (${l10n.userRefineText})`;
+        await addPanel(2);
+        showTextInput(
+          `${o.widgetPrefix}reporter_edit`,
+          l10n.userRefineText,
+          `Please enter more of the ${l10n.userField.toLowerCase()} name`,
+        );
+        return;
+      }
+      if (o.logUnknownResponses) console.warn(`Unexpected Prompt.Response Option: ${event.OptionId}`);
+      break;
+    }
+    default:
+      if (o.logUnknownResponses) console.warn(`Unexpected Prompt.Response: ${event.FeedbackId}`);
+  }
+});
+
+// Process Prompt Clear
+xapi.Event.UserInterface.Message.Prompt.Cleared.on((event) => {
+  switch (event.FeedbackId) {
+    case `${o.widgetPrefix}reporter_select`:
+      if (snowUserMatches.length === 0) return;
+      snowUserMatches = [];
+      userInfo = {};
+      reportInfo.reporter_display = `${reportInfo.reporter} (${l10n.userRefineText})`;
+      addPanel(2);
+      setPanelTimeout();
+      break;
+    default:
+      if (o.logUnknownResponses) console.warn(`Unexpected Prompt.Cleared: ${event.FeedbackId}`);
   }
 });
 
