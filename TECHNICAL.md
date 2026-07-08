@@ -62,6 +62,12 @@ ServiceNow extra fields can be applied in this order:
 - At category level
 - At issue level
 
+#### ServiceNow Reporter Search
+
+When `snowUserLookup` is enabled, the macro first checks ServiceNow for an exact reporter match using `snowUserField` and any configured `snowUserAppend` suffix. If that lookup finds no confident single match and `snowUserDisplayLookup` is enabled, the macro searches active `sys_user` records by display name, using `snowUserDisplayField` and `snowUserDisplaySearchMode`. Set `snowUserDisplaySearchMode` to `startsWith` to match display names that begin with the entered text, or `contains` to match display names that include the entered text anywhere in the name.
+
+If display-name search returns one match, that user is selected automatically for the incident caller. If multiple matches are returned, the touch panel prompts the reporter to choose the correct user or refine the search. `snowUserDisplayLimit` controls how many selectable matches are shown before the refine option.
+
 #### ServiceNow API Authentication
 
 Refer to [this guide](https://www.servicenow.com/docs/r/platform-security/authentication/configure-api-key.html) for steps to configure header-based API key authentication.
@@ -239,6 +245,10 @@ debugButton: true,
 | snowUserAppend | string | `` | Appends a suffix such as `@domain` before lookup |
 | snowUserRequired | bool | `false` | Requires a user when raising a ticket |
 | snowUserField | string | `user_name` | ServiceNow field used for user lookup |
+| snowUserDisplayLookup | bool | `true` | Searches active ServiceNow users by display name when exact lookup is not confident |
+| snowUserDisplayField | string | `name` | ServiceNow field used for fallback display-name search |
+| snowUserDisplaySearchMode | string | `startsWith` | Display-name search mode. Options: `startsWith`, `contains` |
+| snowUserDisplayLimit | num | `4` | Maximum selectable display-name matches shown before the refine option |
 | snowInstance | string | `xxxx.service-now.com` | ServiceNow instance hostname |
 | snowApiKey | string | `` | ServiceNow API key for header-based authentication |
 | snowCredentials | string | `` | Base64-encoded basic auth credentials (legacy option) |

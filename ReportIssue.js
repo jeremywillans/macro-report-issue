@@ -113,6 +113,12 @@ const l10n = {
   userSearchText: 'Search by Username or Display Name', // Text shown when searching for a reporter
   userSelectText: 'Please select the correct', // Text shown when selecting a reporter
   userRefineText: 'Refine Search', // Option shown when reporter search results are not correct
+  userProvidedText: 'Provided', // Prefix used when reporter text could not be matched to a user
+  userValidText: 'Please provide a valid', // Text shown when reporter input is required
+  userUnableMatchText: 'Unable to match the provided', // Text shown when reporter lookup fails
+  userTryAgainText: 'Please try again.', // Text shown after reporter lookup fails
+  userRefinePromptText: 'Please enter more search text for', // Text shown when refining reporter lookup
+  userIncludeText: 'to include a', // Text shown when prompting for optional reporter details
   navigatorText: 'Please complete Feedback Survey on the Touchpanel', // Alert message shown on Board if Navigator connected
 };
 
@@ -659,7 +665,7 @@ async function postWebex() {
     html += `<br><b>${l10n.userField}:</b>  <a href=webexteams://im?email=${userInfo.email}>${userInfo.name}</a> (${userInfo.email})`;
   } else if (reportInfo.reporter) {
     // Include Provided Report Detail if not matched in SNOW
-    html += `<br><b>Provided ${l10n.userField} :</b> ${reportInfo.reporter}`;
+    html += `<br><b>${l10n.userProvidedText} ${l10n.userField} :</b> ${reportInfo.reporter}`;
   }
   html += '</blockquote>';
 
@@ -799,7 +805,7 @@ async function postTeams() {
     facts.push({ title: l10n.userField, value: `${userInfo.name} (${userInfo.email})` });
   } else if (reportInfo.reporter) {
     // Include Provided Email if not matched in SNOW
-    facts.push({ title: `Provided ${l10n.userField}`, value: reportInfo.reporter });
+    facts.push({ title: `${l10n.userProvidedText} ${l10n.userField}`, value: reportInfo.reporter });
   }
 
   cardBody.attachments[0].content.body[1].facts = facts;
@@ -930,7 +936,7 @@ async function postIncident() {
   if (userInfo.sys_id) {
     messageContent.caller_id = userInfo.sys_id;
   } else if (reportInfo.reporter) {
-    messageContent.description += `\nProvided ${l10n.userField}: ${reportInfo.reporter}}`;
+    messageContent.description += `\n${l10n.userProvidedText} ${l10n.userField}: ${reportInfo.reporter}}`;
   }
 
   if (o.snowCmdbCi) {
@@ -1314,12 +1320,12 @@ function showAlert(promptId, overrideTitle = false, overrideText = false) {
   };
   switch (promptId) {
     case `${o.widgetPrefix}reporter_missing`: {
-      promptBody.Text = `Please provide a valid ${l10n.userField}.`;
+      promptBody.Text = `${l10n.userValidText} ${l10n.userField}.`;
       promptBody.Title = `⚠️ Missing ${l10n.userField} ⚠️`;
       break;
     }
     case `${o.widgetPrefix}reporter_invalid`: {
-      promptBody.Text = `Unable to match the provided ${l10n.userField}<br>Please try again.`;
+      promptBody.Text = `${l10n.userUnableMatchText} ${l10n.userField}<br>${l10n.userTryAgainText}`;
       promptBody.Title = `⚠️ Invalid ${l10n.userField} ⚠️`;
       break;
     }
@@ -1430,7 +1436,7 @@ xapi.Event.UserInterface.Extensions.Widget.Action.on(async (event) => {
       addPanel();
       if (raiseTicket && o.userSuggest && (!reportInfo.reporter || reportInfo.reporter === '')) {
         setPanelTimeout();
-        showTextInput(`${o.widgetPrefix}reporter_edit`, `⚠️ Missing ${l10n.userField} ⚠️`, `${l10n.userSearchText} to include a ${l10n.userField.toLowerCase()} in the ${l10n.ticketTerm}`);
+        showTextInput(`${o.widgetPrefix}reporter_edit`, `⚠️ Missing ${l10n.userField} ⚠️`, `${l10n.userSearchText} ${l10n.userIncludeText} ${l10n.userField.toLowerCase()} in the ${l10n.ticketTerm}`);
         return;
       }
       if (o.logDetailed) console.debug(`Raise Ticket: ${raiseTicket}`);
@@ -1536,7 +1542,7 @@ xapi.Event.UserInterface.Message.Prompt.Response.on(async (event) => {
         showTextInput(
           `${o.widgetPrefix}reporter_edit`,
           l10n.userRefineText,
-          `Please enter more of the ${l10n.userField.toLowerCase()} name`,
+          `${l10n.userRefinePromptText} ${l10n.userField.toLowerCase()}`,
         );
         return;
       }
