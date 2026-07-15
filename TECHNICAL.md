@@ -68,6 +68,24 @@ When `snowUserLookup` is enabled, the macro first checks ServiceNow for an exact
 
 If display-name search returns one match, that user is selected automatically for the incident caller. If multiple matches are returned, the touch panel prompts the reporter to choose the correct user or refine the search. `snowUserDisplayLimit` controls how many selectable matches are shown before the refine option.
 
+#### ServiceNow API Calls
+
+All ServiceNow requests use the Table API on `snowInstance` with `Content-Type: application/json`, `Accept: application/json`, and either `x-sn-apikey: <snowApiKey>` or `Authorization: Basic <snowCredentials>`.
+
+| Purpose | Method | Endpoint | Trigger |
+| ------- | ------ | -------- | ------- |
+| Exact reporter lookup | `GET` | `/api/now/table/sys_user?sysparm_limit=2&<snowUserField>=<reporter + snowUserAppend>` | Reporter text is submitted and `snowEnabled` plus `snowUserLookup` or `snowUserRequired` is enabled |
+| Display-name reporter fallback | `GET` | `/api/now/table/sys_user?sysparm_limit=<snowUserDisplayLimit + 1>&sysparm_fields=sys_id,name,email,user_name&sysparm_query=<display query>` | Exact reporter lookup returns zero or multiple records and `snowUserDisplayLookup` is enabled |
+| Device CMDB lookup | `GET` | `/api/now/table/cmdb_ci?sysparm_limit=1&serial_number=<device serial>` | Macro startup/system initialization when `snowEnabled` and `snowCmdbLookup` are enabled |
+| Incident creation | `POST` | `/api/now/table/incident` | A Report Issue or survey response requires a ServiceNow incident |
+| Created incident readback | `GET` | `<Location header returned by incident creation>` | Immediately after incident creation, to read the created incident number |
+
+Notes:
+
+- Exact reporter lookup uses `sysparm_limit=2` so one result is confident, while zero or multiple results can fall through to display-name search.
+- Display-name search builds `sysparm_query` as `active=true^<snowUserDisplayField><operator><reporter>^ORDERBY<snowUserDisplayField>`, with `STARTSWITH` for `startsWith` mode or `LIKE` for `contains` mode.
+- Incident creation always sends `short_description` and `description`, and may add `caller_id`, `cmdb_ci`, and `snowExtra` fields from the global, category, issue, or rating configuration.
+
 #### ServiceNow API Authentication
 
 Refer to [this guide](https://www.servicenow.com/docs/r/platform-security/authentication/configure-api-key.html) for steps to configure header-based API key authentication.
